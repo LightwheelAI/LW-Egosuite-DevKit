@@ -68,3 +68,9 @@ Follow these steps to visualize the processed data in [Foxglove Studio](https://
 Once loaded, the visualization will appear in the Foxglove Studio dashboard as shown below:
 
 ![image](assets/demo.jpg)
+
+## License
+
+This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
+Copyright 2026 Lightwheel Team
