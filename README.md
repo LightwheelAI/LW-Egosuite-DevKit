@@ -18,9 +18,9 @@ pip3 install -e .
 
 ## Usage
 
-### 1. Offline MCAP Conversion
+### 1. Conversion for Visualization
 
-Convert raw record data to MCAP format.
+Generate visualization-ready MCAP files from raw egosuite MCAP data.
 
 #### 1.1 Single File Conversion
 
@@ -55,7 +55,7 @@ for input_mcap_path in "$data_path"/*.mcap; do
 done
 ```
 
-* `$data_path`: The directory containing the source MCAP files. Each file will be converted and saved with a `_vis.mcap` suffix in the same directory.
+* `$data_path`: The directory containing the source MCAP files. Each file will be converted and saved with a `_vis.mcap` suffix in the `./output/` directory.
 
 ### 2. Visualization with Foxglove Studio
 
