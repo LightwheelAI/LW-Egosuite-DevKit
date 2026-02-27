@@ -11,7 +11,7 @@
 ```bash
 cd lw_egosuite_devkit
 
-conda create -n lwviz python=3.11
+conda create -n lw_egosuite_devkit python=3.11 -y
 conda activate lw_egosuite_devkit
 pip3 install -e .
 ```
