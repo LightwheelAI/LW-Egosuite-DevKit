@@ -1,0 +1,11 @@
+mcap==1.3.1
+mcap_protobuf_support==0.5.4
+numpy==2.4.2
+opencv_python==4.13.0.90
+pypcd4==1.4.3
+scipy==1.17.0
+setproctitle==1.3.7
+tqdm==4.67.1
+typing_extensions==4.15.0
+tyro==1.0.5
+tornado==6.5.4

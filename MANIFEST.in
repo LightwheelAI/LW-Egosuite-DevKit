@@ -1,0 +1,4 @@
+prune proto
+prune include
+prune scripts
+prune bin

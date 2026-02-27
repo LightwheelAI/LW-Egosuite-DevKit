@@ -1,0 +1,16 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "convert-to-mcap",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "foxglove_backend/tyro_cli.py",
+            "console": "integratedTerminal",
+            "args": "convert-to-mcap --path /home/lightwheel/project/devkit_dev/lw-egosuite-devkit/workdir --writer.path /home/lightwheel/project/devkit_dev/lw-egosuite-devkit/output/output.mcap"
+        },
+    ]
+}

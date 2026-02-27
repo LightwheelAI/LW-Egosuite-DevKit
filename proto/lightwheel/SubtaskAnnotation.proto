@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package lightwheel;
+
+// 人类动作注释
+message SubtaskAnnotation {
+  google.protobuf.Timestamp timestamp = 1;
+  string data = 2; // description
+}

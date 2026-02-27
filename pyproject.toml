@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64.0", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+"write_to" = "foxglove_backend/version.py"
+
+[project]
+name = "lw-egosuite-devkit"
+readme = "REAMD.md"
+
+version = "0.0.1"
+
+requires-python = ">= 3.10"
+
+dependencies=[
+    "mcap",
+    "mcap_protobuf_support",
+    "numpy",
+    "opencv_python",
+    "pypcd4",
+    "scipy",
+    "setproctitle",
+    "torch",
+    "torchvision",
+    "tqdm",
+    "typing_extensions",
+    "tyro"
+]
+
+[tool.setuptools.packages]
+find = {}
+
+[project.scripts]
+lwviz = "foxglove_backend.tyro_cli:entrypoint"
