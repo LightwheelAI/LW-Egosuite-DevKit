@@ -37,3 +37,4 @@ from . import frame_tf  # noqa
 from . import scene_update_generator  # noqa
 from . import audio  # noqa
 from . import low_quality  # noqa
+from . import std_pcd_static  # noqa

@@ -12,6 +12,7 @@ from foxglove_backend.mcap_writer import MCAPWriter
 from foxglove_backend.converters.std_mcap import (
     StdAnnotationPerFrameReader,
     StdLowQualityReader,
+    StdPointCloudReader,
 )
 from foxglove_backend.converters.pose.std_mcap import (
     StdPoseDataReader,
@@ -153,6 +154,14 @@ class StdPipeline(BasePipeline):
                 pose_data_reader=pose_reader,
                 raw_topic="scene-update/head_pose_trajectory",
                 points_number_to_show=int(30 * 1.5),
+            )
+        )
+
+        # 3) Point cloud topics: read point clouds and generate static scene
+        self._add_reader(
+            StdPointCloudReader(
+                file_path=self.path,
+                raw_topic="pointcloud/static",
             )
         )
 

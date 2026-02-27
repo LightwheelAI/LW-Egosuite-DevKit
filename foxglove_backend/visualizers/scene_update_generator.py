@@ -7,16 +7,16 @@ import numpy as np
 # --- Topology Definition (Index Pairs) ---
 # Lower-body skeleton: left leg and right leg
 LOWER_BODY_BONES = [
-    (0, 1), (1, 4), (4, 7), (7, 10), # Left leg
-    (0, 2), (2, 5), (5, 8), (8, 11), # Right Leg
+    (0, 1), (1, 4), (4, 7), (7, 10),  # Left leg
+    (0, 2), (2, 5), (5, 8), (8, 11),  # Right Leg
 ]
 
 # Upper-body skeleton: spine and arms + cam body的手腕单独画了
 UPPER_BODY_BONES = [
-    (0, 3), (3, 6), (6, 9), (9, 12), (12, 15), # Spine
-    (9, 13), (13, 16), (16, 18), (18, 20), # Left Arm
+    (0, 3), (3, 6), (6, 9), (9, 12), (12, 15),  # Spine
+    (9, 13), (13, 16), (16, 18), (18, 20),  # Left Arm
     (9, 14), (14, 17), (17, 19), (19, 21),  # Right Arm
-    (15, 22), (15, 23) # head->cam
+    (15, 22), (15, 23)  # head->cam
 ]
 
 # Keep the original BODY_BONES for compatibility (if needed)
@@ -26,8 +26,8 @@ HAND_BONES = [
     (0, 1), (1, 2), (2, 3), (3, 4),       # Thumb
     (0, 5), (5, 6), (6, 7), (7, 8),       # Index finger
     (0, 9), (9, 10), (10, 11), (11, 12),  # Middle finger
-    (0, 13), (13, 14), (14, 15), (15, 16),# Ring finger
-    (0, 17), (17, 18), (18, 19), (19, 20) # Pinky
+    (0, 13), (13, 14), (14, 15), (15, 16),  # Ring finger
+    (0, 17), (17, 18), (18, 19), (19, 20)  # Pinky
 ]
 
 # Color definitions
@@ -40,6 +40,7 @@ COLOR_HAND_POINTS = {"r": 1.0, "g": 1.0, "b": 0, "a": 1.0}
 # Whether to output only one complete body (True, default) or keep upper and lower body separated (False)
 ONLY_FULL_BODY = True
 
+
 @register("scene-update")
 @register("*/scene_update")
 class SceneUpdateGenerator(Generator):
@@ -49,24 +50,25 @@ class SceneUpdateGenerator(Generator):
         if ONLY_FULL_BODY:
             # Output only one full body + left and right hands
             return dict(
-                { f"{prefix}/body_keypoints": "foxglove.SceneUpdate" },
-                **{ f"{prefix}/right_hand_keyponts": "foxglove.SceneUpdate" },
-                **{ f"{prefix}/left_hand_keyponts": "foxglove.SceneUpdate" },
-                **{ f"{prefix}/right_hand_keyponts_2d": "foxglove.SceneUpdate" },
-                **{ f"{prefix}/left_hand_keyponts_2d": "foxglove.SceneUpdate" },
+                {f"{prefix}/body_keypoints": "foxglove.SceneUpdate"},
+                **{f"{prefix}/right_hand_keypoints": "foxglove.SceneUpdate"},
+                **{f"{prefix}/left_hand_keypoints": "foxglove.SceneUpdate"},
+                **{f"{prefix}/right_hand_keypoints_2d": "foxglove.SceneUpdate"},
+                **{f"{prefix}/left_hand_keypoints_2d": "foxglove.SceneUpdate"},
             )
         else:
             # Upper and lower body separation + left and right hands
             return dict(
-                { f"{prefix}/upper_body_keypoints": "foxglove.SceneUpdate" },
-                **{ f"{prefix}/lower_body_keypoints": "foxglove.SceneUpdate" },
-                **{ f"{prefix}/right_hand_keyponts": "foxglove.SceneUpdate" },
-                **{ f"{prefix}/left_hand_keyponts": "foxglove.SceneUpdate" },
+                {f"{prefix}/upper_body_keypoints": "foxglove.SceneUpdate"},
+                **{f"{prefix}/lower_body_keypoints": "foxglove.SceneUpdate"},
+                **{f"{prefix}/right_hand_keypoints": "foxglove.SceneUpdate"},
+                **{f"{prefix}/left_hand_keypoints": "foxglove.SceneUpdate"},
             )
 
     def setup(self, **kwargs):
         parts = self.src_topic.split("/")
-        self._stem = parts[0] if parts and not self.src_topic.startswith("/") else None
+        self._stem = parts[0] if parts and not self.src_topic.startswith(
+            "/") else None
         self.scene_update_cls = self.get_message_type("foxglove.SceneUpdate")
         # Even though the Primitive class is not explicitly required here, ensure the foxglove library is properly loaded.
 
@@ -142,62 +144,84 @@ class SceneUpdateGenerator(Generator):
             if ONLY_FULL_BODY:
                 # 1. Full body: Use the BODY_BONES connectivity.
                 used_indices = sorted(
-                    {idx for pair in BODY_BONES for idx in pair if idx < len(world_body_pts)}
+                    {idx for pair in BODY_BONES for idx in pair if idx <
+                        len(world_body_pts)}
                 )
                 body_pts = [world_body_pts[i] for i in used_indices]
 
-                update_msg_body, entity_body = create_base_entity("full_body_skeleton")
+                update_msg_body, entity_body = create_base_entity(
+                    "full_body_skeleton")
                 add_spheres(entity_body, body_pts, 0.022, COLOR_JOINT)
-                add_lines(entity_body, world_body_pts, BODY_BONES, 0.01, COLOR_BODY)
+                add_lines(entity_body, world_body_pts,
+                          BODY_BONES, 0.01, COLOR_BODY)
 
                 yield f"/{self._stem}/body_keypoints" if self._stem else "/body_keypoints", update_msg_body
 
             else:
                 # 1. Generate lower body keypoints topic (/lower_body_keypoints)
                 # Includes: keypoints of the left and right legs (indices 0–11) and bones
-                lower_body_indices = [0, 1, 2, 4, 5, 7, 8, 10, 11]  # Lower-body keypoint indices
-                lower_body_pts = [world_body_pts[i] for i in lower_body_indices if i < len(world_body_pts)]
+                # Lower-body keypoint indices
+                lower_body_indices = [0, 1, 2, 4, 5, 7, 8, 10, 11]
+                lower_body_pts = [world_body_pts[i]
+                                  for i in lower_body_indices if i < len(world_body_pts)]
 
-                update_msg_lower, entity_lower = create_base_entity("lower_body_skeleton")
+                update_msg_lower, entity_lower = create_base_entity(
+                    "lower_body_skeleton")
                 add_spheres(entity_lower, lower_body_pts, 0.008, COLOR_JOINT)
-                add_lines(entity_lower, world_body_pts, LOWER_BODY_BONES, 0.0035, COLOR_BODY)
+                add_lines(entity_lower, world_body_pts,
+                          LOWER_BODY_BONES, 0.0035, COLOR_BODY)
                 yield f"/{self._stem}/lower_body_keypoints" if self._stem else "/lower_body_keypoints", update_msg_lower
 
                 # 2. Generate upper body keypoints topic (/upper_body_keypoints)
                 # Includes: key points of the spine and arms (indices 0, 3, 6, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23) and bones
                 # Note: Index 0 (pelvis) is also included because the spine starts from the pelvis.
-                upper_body_indices = [0, 3, 6, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]  # Upper body keypoint indices
-                upper_body_pts = [world_body_pts[i] for i in upper_body_indices if i < len(world_body_pts)]
+                # Upper body keypoint indices
+                upper_body_indices = [0, 3, 6, 9, 12, 13,
+                                      14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+                upper_body_pts = [world_body_pts[i]
+                                  for i in upper_body_indices if i < len(world_body_pts)]
 
-                update_msg_upper, entity_upper = create_base_entity("upper_body_skeleton")
+                update_msg_upper, entity_upper = create_base_entity(
+                    "upper_body_skeleton")
                 add_spheres(entity_upper, upper_body_pts, 0.022, COLOR_JOINT)
-                add_lines(entity_upper, world_body_pts, UPPER_BODY_BONES, 0.01, COLOR_BODY)
+                add_lines(entity_upper, world_body_pts,
+                          UPPER_BODY_BONES, 0.01, COLOR_BODY)
 
                 yield f"/{self._stem}/upper_body_keypoints" if self._stem else "/upper_body_keypoints", update_msg_upper
 
-        # 3. Generate right-hand keypoints topic (/right_hand_keyponts)
+        # 3. Generate right-hand keypoints topic (/right_hand_keypoints)
         if len(world_r_hand_pts) > 0:
-            update_msg_r_hand, entity_r_hand = create_base_entity("right_hand_skeleton")
+            update_msg_r_hand, entity_r_hand = create_base_entity(
+                "right_hand_skeleton")
             add_spheres(entity_r_hand, world_r_hand_pts, 0.015, COLOR_JOINT)
-            add_lines(entity_r_hand, world_r_hand_pts, HAND_BONES, 0.005, COLOR_R_HAND)
-            yield f"/{self._stem}/right_hand_keyponts" if self._stem else "/right_hand_keyponts", update_msg_r_hand
+            add_lines(entity_r_hand, world_r_hand_pts,
+                      HAND_BONES, 0.005, COLOR_R_HAND)
+            yield f"/{self._stem}/right_hand_keypoints" if self._stem else "/right_hand_keypoints", update_msg_r_hand
 
-            update_msg_r_hand, entity_r_hand = create_base_entity("right_hand_skeleton")
-            add_spheres(entity_r_hand, world_r_hand_pts, 0.008, COLOR_HAND_POINTS)
-            add_lines(entity_r_hand, world_r_hand_pts, HAND_BONES, 0.0035, COLOR_R_HAND)
-            yield f"/{self._stem}/right_hand_keyponts_2d" if self._stem else "/right_hand_keyponts_2d", update_msg_r_hand
+            update_msg_r_hand, entity_r_hand = create_base_entity(
+                "right_hand_skeleton")
+            add_spheres(entity_r_hand, world_r_hand_pts,
+                        0.008, COLOR_HAND_POINTS)
+            add_lines(entity_r_hand, world_r_hand_pts,
+                      HAND_BONES, 0.0035, COLOR_R_HAND)
+            yield f"/{self._stem}/right_hand_keypoints_2d" if self._stem else "/right_hand_keypoints_2d", update_msg_r_hand
 
         # 4. Generate left-hand keypoints topic (/left_hand_keypoints)
         if len(world_l_hand_pts) > 0:
-            update_msg_l_hand, entity_l_hand = create_base_entity("left_hand_skeleton")
+            update_msg_l_hand, entity_l_hand = create_base_entity(
+                "left_hand_skeleton")
             add_spheres(entity_l_hand, world_l_hand_pts, 0.015, COLOR_JOINT)
-            add_lines(entity_l_hand, world_l_hand_pts, HAND_BONES, 0.005, COLOR_L_HAND)
-            yield f"/{self._stem}/left_hand_keyponts" if self._stem else "/left_hand_keyponts", update_msg_l_hand
+            add_lines(entity_l_hand, world_l_hand_pts,
+                      HAND_BONES, 0.005, COLOR_L_HAND)
+            yield f"/{self._stem}/left_hand_keypoints" if self._stem else "/left_hand_keypoints", update_msg_l_hand
 
-            update_msg_l_hand, entity_l_hand = create_base_entity("left_hand_skeleton")
-            add_spheres(entity_l_hand, world_l_hand_pts, 0.008, COLOR_HAND_POINTS)
-            add_lines(entity_l_hand, world_l_hand_pts, HAND_BONES, 0.0035, COLOR_L_HAND)
-            yield f"/{self._stem}/left_hand_keyponts_2d" if self._stem else "/left_hand_keyponts_2d", update_msg_l_hand
+            update_msg_l_hand, entity_l_hand = create_base_entity(
+                "left_hand_skeleton")
+            add_spheres(entity_l_hand, world_l_hand_pts,
+                        0.008, COLOR_HAND_POINTS)
+            add_lines(entity_l_hand, world_l_hand_pts,
+                      HAND_BONES, 0.0035, COLOR_L_HAND)
+            yield f"/{self._stem}/left_hand_keypoints_2d" if self._stem else "/left_hand_keypoints_2d", update_msg_l_hand
 
 
 @register("/head-pose-trajectory")
@@ -212,7 +236,8 @@ class HeadPoseTrajectoryGenerator(Generator):
 
     def setup(self, **kwargs):
         parts = self.src_topic.split("/")
-        self._stem = parts[0] if parts and not self.src_topic.startswith("/") else None
+        self._stem = parts[0] if parts and not self.src_topic.startswith(
+            "/") else None
         self.scene_update_cls = self.get_message_type("foxglove.SceneUpdate")
 
     def generate(self, data, timestamp):
