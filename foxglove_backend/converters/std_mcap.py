@@ -37,10 +37,25 @@ class StdAnnotationPerFrameReader(BaseReader):
 
     def generate_line(self) -> Generator[Tuple[str, Any, int], Any, None]:
         """
-        Read /annotation/segments (annotation.segments.AnnotationSegment) and
-        expand segments into per-frame annotations, compatible with
-        AnnotationsGenerator input.
+        Read /annotation/segments and expand into per-frame annotations.
+
+        Supports two MCAP shapes produced by annotation_segments_json_to_proto:
+        - tier1/tier2: first message is tier1 (caption only, no time range); rest are tier2
+          with label, start_time, end_time (seconds). Caption from tier1 plays for whole episode.
+        - annotations: segments with description, skill, start_frame, end_frame.
         """
+        # Build frame timeline first (needed for both formats and for out_start_frame/end_frame).
+        frame_timestamps = []
+        raw_reader = make_reader(self.file_path.open("rb"))
+        for _schema, channel, message in raw_reader.iter_messages(topics=["/pose/body"]):
+            if channel.topic == "/pose/body":
+                frame_timestamps.append(int(getattr(message, "log_time", 0)))
+        total_frames = len(frame_timestamps)
+        if not total_frames:
+            return
+        episode_start_ns = frame_timestamps[0]
+
+        episode_caption = ""
         segments = []
         segment_topic = "/annotation/segments"
         for item in self._reader.iter_decoded_messages(topics=[segment_topic]):
@@ -54,69 +69,105 @@ class StdAnnotationPerFrameReader(BaseReader):
                 except ValueError:
                     _topic, msg, _src_ts = item  # type: ignore[misc]
 
-            segment = getattr(msg, "segment", None)
-            if segment is None:
+            seg = getattr(msg, "segment", None)
+            if seg is None:
                 continue
-            segments.append(
-                {
-                    "description": str(getattr(segment, "description", "")),
-                    "skill": str(getattr(segment, "skill", "")),
-                    "start_frame": int(getattr(segment, "start_frame", 0)),
-                    "end_frame": int(getattr(segment, "end_frame", 0)),
-                }
-            )
 
-        if not segments:
-            return
+            description = str(getattr(seg, "description", "") or "")
+            skill = str(getattr(seg, "skill", "") or "")
+            start_frame = getattr(seg, "start_frame", None)
+            end_frame = getattr(seg, "end_frame", None)
 
-        # Sort by start frame (same idea as annotation.py).
-        segments = sorted(segments, key=lambda x: x["start_frame"])
+            caption = str(getattr(seg, "caption", "") or "")
+            label = str(getattr(seg, "label", "") or "")
+            start_time = getattr(seg, "start_time", None)
+            end_time = getattr(seg, "end_time", None)
 
-        # Use /pose/body timestamps as per-frame timeline.
-        frame_timestamps = []
-        raw_reader = make_reader(self.file_path.open("rb"))
-        for _schema, channel, message in raw_reader.iter_messages(topics=["/pose/body"]):
-            if channel.topic == "/pose/body":
-                frame_timestamps.append(int(getattr(message, "log_time", 0)))
+            # tier1-only: caption set, no meaningful time range (0,0), no label → episode caption
+            st_sec = float(start_time) if start_time is not None else 0.0
+            et_sec = float(end_time) if end_time is not None else 0.0
+            has_frames = start_frame is not None and end_frame is not None
+            if caption and not label and st_sec == 0 and et_sec == 0:
+                episode_caption = caption
+                continue
+            # tier2: label + start_time/end_time (seconds)
+            if (start_time is not None and end_time is not None) and (label or st_sec != 0 or et_sec != 0):
+                segments.append({
+                    "by_time": True,
+                    "description": label,
+                    "start_time_sec": st_sec,
+                    "end_time_sec": et_sec,
+                })
+                continue
+            # annotations: description/skill + start_frame/end_frame
+            if has_frames:
+                segments.append({
+                    "by_time": False,
+                    "description": description,
+                    "skill": skill,
+                    "start_frame": int(start_frame),
+                    "end_frame": int(end_frame),
+                })
 
-        total_frames = len(frame_timestamps)
+        def _segment_start_key(s):
+            return s["start_time_sec"] if s["by_time"] else s["start_frame"]
+        segments = sorted(segments, key=_segment_start_key)
 
         stage_index = 0
         for frame_idx in range(total_frames):
+            timestamp_ns = frame_timestamps[frame_idx]
+            relative_sec = (timestamp_ns - episode_start_ns) / 1_000_000_000.0
+
             current_segment = None
             while stage_index < len(segments):
                 stage = segments[stage_index]
-                if frame_idx < stage["start_frame"]:
-                    break
-                if stage["start_frame"] <= frame_idx <= stage["end_frame"]:
-                    current_segment = stage
-                    break
+                if stage["by_time"]:
+                    if relative_sec < stage["start_time_sec"]:
+                        break
+                    if stage["start_time_sec"] <= relative_sec <= stage["end_time_sec"]:
+                        current_segment = stage
+                        break
+                else:
+                    if frame_idx < stage["start_frame"]:
+                        break
+                    if stage["start_frame"] <= frame_idx <= stage["end_frame"]:
+                        current_segment = stage
+                        break
                 stage_index += 1
 
+            if current_segment and current_segment["by_time"]:
+                out_start_frame = 0
+                out_end_frame = total_frames - 1
+                for fi, ts_ns in enumerate(frame_timestamps):
+                    t_sec = (ts_ns - episode_start_ns) / 1_000_000_000.0
+                    if t_sec >= current_segment["start_time_sec"]:
+                        out_start_frame = fi
+                        break
+                for fi in range(total_frames - 1, -1, -1):
+                    t_sec = (frame_timestamps[fi] - episode_start_ns) / 1_000_000_000.0
+                    if t_sec <= current_segment["end_time_sec"]:
+                        out_end_frame = fi
+                        break
+            else:
+                out_start_frame = int(current_segment["start_frame"]) if current_segment else 0
+                out_end_frame = int(current_segment["end_frame"]) if current_segment else (total_frames - 1)
 
-            timestamp_ns = frame_timestamps[frame_idx]
             sec = int(timestamp_ns // 1_000_000_000)
             nanos = int(timestamp_ns % 1_000_000_000)
-
             data = {
                 "frame_number": int(frame_idx),
                 "timestamp_seconds": sec,
                 "timestamp_nanos": nanos,
                 "has_annotation": bool(current_segment is not None),
                 "description": {
-                    "description":current_segment["description"] if current_segment else "",
-                    "skill": current_segment["skill"] if current_segment else "",
+                    "caption": episode_caption,
+                    "description": current_segment["description"] if current_segment else "",
+                    "skill": current_segment.get("skill", "") if current_segment else "",
                 },
-                # "skill": current_segment["skill"] if current_segment else "",
-                "skill": "",
-                "start_frame": int(current_segment["start_frame"]) if current_segment else 0,
-                "end_frame": int(current_segment["end_frame"]) if current_segment else (total_frames - 1),
+                "start_frame": out_start_frame,
+                "end_frame": out_end_frame,
             }
             yield self.raw_topic, data, int(timestamp_ns)
-
-
-
-
 
 
 @dataclass(kw_only=True)

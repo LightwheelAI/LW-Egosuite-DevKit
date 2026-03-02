@@ -167,4 +167,4 @@ output/
 workdir/
 third_party/
 
-input/
+input*/
