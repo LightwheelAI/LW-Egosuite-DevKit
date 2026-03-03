@@ -1,17 +1,6 @@
 from abc import ABC, abstractmethod
-import queue
-import threading
-# import multiprocessing as mp
-import torch.multiprocessing as mp
-import heapq
-import math
-import setproctitle
-from collections import defaultdict
-import traceback
-import tqdm
-from pathlib import Path
 from dataclasses import dataclass
-from typing import Any, Generator, Tuple, Union, Optional
+from typing import Any, Generator, Tuple, Optional
 
 @dataclass(kw_only=True)
 class BaseReader:

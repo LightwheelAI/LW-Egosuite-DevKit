@@ -21,8 +21,6 @@ dependencies=[
     "pypcd4==1.4.3",
     "scipy==1.17.0",
     "setproctitle==1.3.7",
-    "torch",
-    "torchvision",
     "tqdm==4.67.1",
     "typing_extensions==4.15.0",
     "tyro==1.0.5",

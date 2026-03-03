@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Generator, Tuple
 
+import tqdm
 from mcap.reader import make_reader
 from mcap_protobuf.decoder import DecoderFactory
 
@@ -318,7 +319,12 @@ class StdPointCloudReader(BaseReader):
 
         # First pass: collect all point cloud data
         pointcloud_topic = "/pointcloud"
-        for item in self._reader.iter_decoded_messages(topics=[pointcloud_topic]):
+        for item in tqdm.tqdm(
+            self._reader.iter_decoded_messages(topics=[pointcloud_topic]),
+            desc="pointcloud",
+            miniters=10,
+            mininterval=0.5,
+        ):
             if hasattr(item, "channel"):
                 message = getattr(item, "message", None)
                 msg = getattr(item, "decoded_message", None) or message
