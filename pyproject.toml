@@ -7,16 +7,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lw-egosuite-devkit"
-readme = "REAMD.md"
-
-version = "0.0.1"
+version = "0.1.2"
+description = "Lightwheel Egosuite DevKit - MCAP conversion and visualization pipeline"
+readme = "README.md"
+license = { text = "Apache-2.0" }
 
 requires-python = ">= 3.10"
 
 dependencies=[
     "mcap==1.3.1",
     "mcap_protobuf_support==0.5.4",
-    "numpy==2.4.2",
+    "numpy",
     "opencv_python==4.13.0.90",
     "pypcd4==1.4.3",
     "scipy==1.17.0",

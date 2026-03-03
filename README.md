@@ -8,6 +8,14 @@
 
 ### Install
 
+**From PyPI:**
+
+```bash
+pip install lw-egosuite-devkit
+```
+
+**From source:**
+
 ```bash
 cd lw_egosuite_devkit
 
