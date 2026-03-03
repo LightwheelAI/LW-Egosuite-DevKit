@@ -3,11 +3,11 @@ requires = ["setuptools>=64.0", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-"write_to" = "foxglove_backend/version.py"
+"write_to" = "lw_egosuite_backend/version.py"
 
 [project]
 name = "lw-egosuite-devkit"
-version = "0.1.2"
+version = "0.1.3"
 description = "Lightwheel Egosuite DevKit - MCAP conversion and visualization pipeline"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -32,4 +32,4 @@ dependencies=[
 find = {}
 
 [project.scripts]
-lwviz = "foxglove_backend.tyro_cli:entrypoint"
+lw-egosuite = "lw_egosuite_backend.tyro_cli:entrypoint"

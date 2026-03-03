@@ -1,7 +1,7 @@
 from collections import defaultdict
 from fnmatch import fnmatch
 from typing import List, Dict, Type
-from foxglove_backend.base.base_generator import Generator, MessageTypes
+from lw_egosuite_backend.base.base_generator import Generator, MessageTypes
 
 
 registry: Dict[str, List[Type["Generator"]]] = defaultdict(list)

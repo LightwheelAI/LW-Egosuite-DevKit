@@ -7,14 +7,14 @@ import tyro
 from mcap.reader import make_reader
 from mcap_protobuf.decoder import DecoderFactory
 
-from foxglove_backend.base.base_pipeline import BasePipeline
-from foxglove_backend.mcap_writer import MCAPWriter
-from foxglove_backend.converters.std_mcap import (
+from lw_egosuite_backend.base.base_pipeline import BasePipeline
+from lw_egosuite_backend.mcap_writer import MCAPWriter
+from lw_egosuite_backend.converters.std_mcap import (
     StdAnnotationPerFrameReader,
     StdLowQualityReader,
     StdPointCloudReader,
 )
-from foxglove_backend.converters.pose.std_mcap import (
+from lw_egosuite_backend.converters.pose.std_mcap import (
     StdPoseDataReader,
     StdPoseSceneReader,
     StdPoseTFReader,
@@ -31,7 +31,7 @@ class StdPipeline(BasePipeline):
     Standard MCAP → visualization MCAP pipeline.
 
     Usage:
-        python -m foxglove_backend.std_pipeline \\
+        python -m lw_egosuite.std_pipeline \\
             --path in.mcap \\
             --writer.path out.mcap
     """
@@ -165,7 +165,6 @@ class StdPipeline(BasePipeline):
             )
         )
 
-
     def set_writer(self):
         # BasePipeline expects writer.topic2pb2 to be populated.
         self.writer.set_topic2pb2(self.output_topic2pb2)
@@ -177,11 +176,11 @@ def main():
     """
     CLI entry so that:
 
-        python -m foxglove_backend.std_pipeline --path in.mcap --writer.path out.mcap
+        python -m lw_egosuite.std_pipeline --path in.mcap --writer.path out.mcap
 
     works and behaves consistently with the other pipelines.
     """
-    from foxglove_backend.logging_config import setup_logging
+    from lw_egosuite_backend.logging_config import setup_logging
 
     setup_logging()
     tyro.extras.set_accent_color("magenta")

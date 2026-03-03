@@ -6,7 +6,7 @@ from typing import Any, Dict, Generator, List, Tuple
 from mcap.reader import make_reader
 from mcap_protobuf.decoder import DecoderFactory
 
-from foxglove_backend.base.base_reader import BaseReader
+from lw_egosuite_backend.base.base_reader import BaseReader
 
 logger = logging.getLogger(__name__)
 # Keep body/hand naming consistent with legacy pose TF conversion.
@@ -160,7 +160,6 @@ class StdPoseDataReader:
         return self._frames_cache
 
 
-
 @dataclass(kw_only=True)
 class StdPoseSceneReader(BaseReader):
     pose_data_reader: StdPoseDataReader
@@ -186,12 +185,13 @@ class StdPoseSceneReader(BaseReader):
                     head_idx = 15 if len(body_points) > 15 else 0
                     head_pose = body_points[head_idx]
                 else:
-                    logger.warning("Head pose is None, using default value (0.0, 0.0, 0.0, w=1.0, x=0.0, y=0.0, z=0.0).")
-                    head_pose = {"x": 0.0, "y": 0.0, "z": 0.0, "quat": {"w": 1.0, "x": 0.0, "y": 0.0, "z": 0.0}}
+                    logger.warning(
+                        "Head pose is None, using default value (0.0, 0.0, 0.0, w=1.0, x=0.0, y=0.0, z=0.0).")
+                    head_pose = {"x": 0.0, "y": 0.0, "z": 0.0, "quat": {
+                        "w": 1.0, "x": 0.0, "y": 0.0, "z": 0.0}}
             if len(body_points) > 15:
                 # fix head 15
                 body_points[15] = head_pose
-
 
             headcam_pose = frame.get("headcam_pose") or head_pose
             right_eye_cam_pose = frame.get("right_eye_cam_pose") or head_pose
@@ -379,4 +379,3 @@ class StdPoseTFReader(BaseReader):
                 "timestamp_nanos": int(nanos),
                 "tf_data": tf_data,
             }, int(ts)
-

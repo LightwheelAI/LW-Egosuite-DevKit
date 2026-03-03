@@ -7,13 +7,14 @@ import tqdm
 from mcap.reader import make_reader
 from mcap_protobuf.decoder import DecoderFactory
 
-from foxglove_backend.base.base_reader import BaseReader
-from foxglove_backend.visualizers import get_visualization_generators, MessageTypes
+from lw_egosuite_backend.base.base_reader import BaseReader
+from lw_egosuite_backend.visualizers import get_visualization_generators, MessageTypes
 import numpy as np
 import struct
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass(kw_only=True)
 class StdAnnotationPerFrameReader(BaseReader):
@@ -26,7 +27,8 @@ class StdAnnotationPerFrameReader(BaseReader):
     file_path: Path
 
     def setup(self):
-        self._reader = make_reader(self.file_path.open("rb"), decoder_factories=[DecoderFactory()])
+        self._reader = make_reader(self.file_path.open(
+            "rb"), decoder_factories=[DecoderFactory()])
         # Logical topic used inside the pipeline / visualizers.
         self.raw_topic = "subtask-annotation"
 
@@ -65,7 +67,8 @@ class StdAnnotationPerFrameReader(BaseReader):
                 msg = getattr(item, "decoded_message", None) or message
             else:
                 try:
-                    _schema, _channel, message, decoded_message = item  # type: ignore[misc]
+                    # type: ignore[misc]
+                    _schema, _channel, message, decoded_message = item
                     msg = decoded_message or message
                 except ValueError:
                     _topic, msg, _src_ts = item  # type: ignore[misc]
@@ -145,13 +148,16 @@ class StdAnnotationPerFrameReader(BaseReader):
                         out_start_frame = fi
                         break
                 for fi in range(total_frames - 1, -1, -1):
-                    t_sec = (frame_timestamps[fi] - episode_start_ns) / 1_000_000_000.0
+                    t_sec = (frame_timestamps[fi] -
+                             episode_start_ns) / 1_000_000_000.0
                     if t_sec <= current_segment["end_time_sec"]:
                         out_end_frame = fi
                         break
             else:
-                out_start_frame = int(current_segment["start_frame"]) if current_segment else 0
-                out_end_frame = int(current_segment["end_frame"]) if current_segment else (total_frames - 1)
+                out_start_frame = int(
+                    current_segment["start_frame"]) if current_segment else 0
+                out_end_frame = int(current_segment["end_frame"]) if current_segment else (
+                    total_frames - 1)
 
             sec = int(timestamp_ns // 1_000_000_000)
             nanos = int(timestamp_ns % 1_000_000_000)
@@ -181,7 +187,8 @@ class StdLowQualityReader(BaseReader):
     file_path: Path
 
     def setup(self):
-        self._reader = make_reader(self.file_path.open("rb"), decoder_factories=[DecoderFactory()])
+        self._reader = make_reader(self.file_path.open(
+            "rb"), decoder_factories=[DecoderFactory()])
         self.raw_topic = "low-quality-annotation"
 
     def match_processors(self):
@@ -204,10 +211,12 @@ class StdLowQualityReader(BaseReader):
         frame_to_types = {}
         for item in self._reader.iter_decoded_messages(topics=["/annotation/low_quality"]):
             if hasattr(item, "channel"):
-                msg = getattr(item, "decoded_message", None) or getattr(item, "message", None)
+                msg = getattr(item, "decoded_message", None) or getattr(
+                    item, "message", None)
             else:
                 try:
-                    _schema, _channel, _message, decoded_message = item  # type: ignore[misc]
+                    # type: ignore[misc]
+                    _schema, _channel, _message, decoded_message = item
                     msg = decoded_message
                 except ValueError:
                     _topic, msg, _ts = item  # type: ignore[misc]
@@ -233,6 +242,7 @@ class StdLowQualityReader(BaseReader):
                 "timestamp_nanos": nanos,
                 "problem_types": frame_to_types.get(frame_idx, []),
             }, ts_ns
+
 
 def _voxel_key(x, y, z, voxel_size):
     """Voxel grid key (i, j, k)."""
@@ -304,7 +314,8 @@ class StdPointCloudReader(BaseReader):
             for field_name, field_info in fields.items():
                 field_offset = byte_offset + field_info["offset"]
                 if field_info["type"] == 7:  # FLOAT32
-                    value = struct.unpack('<f', data[field_offset:field_offset+4])[0]
+                    value = struct.unpack(
+                        '<f', data[field_offset:field_offset+4])[0]
                     points[field_name][i] = value
                 elif field_info["type"] == 1:  # UINT8
                     value = data[field_offset]
@@ -344,7 +355,8 @@ class StdPointCloudReader(BaseReader):
                 self._frame_timestamps.append(timestamp)
 
         # Generate static scene point cloud
-        static_scene = self._build_static_scene_accumulate_exclude_hands() #self._build_static_scene()
+        # self._build_static_scene()
+        static_scene = self._build_static_scene_accumulate_exclude_hands()
         if static_scene is not None:
             yield self.raw_topic, static_scene, self._frame_timestamps[0]
 
@@ -384,7 +396,6 @@ class StdPointCloudReader(BaseReader):
             b = np.asarray(pc_data["blue"], dtype=np.float64)
             a = np.asarray(pc_data["alpha"], dtype=np.float64)
 
-
             keep_mask = np.ones(len(x_out), dtype=bool)
 
             for hand_pos in hand_positions:
@@ -415,7 +426,7 @@ class StdPointCloudReader(BaseReader):
         static_points = []
         for key, points_list in voxel_to_points.items():
             arr = np.array(points_list, dtype=[("x", np.float64), ("y", np.float64), ("z", np.float64),
-                                            ("red", np.float64), ("green", np.float64), ("blue", np.float64), ("alpha", np.float64)])
+                                               ("red", np.float64), ("green", np.float64), ("blue", np.float64), ("alpha", np.float64)])
             mean_xyz = np.array(
                 [arr["x"].mean(), arr["y"].mean(), arr["z"].mean()])
             mean_rgba = np.array(
@@ -425,17 +436,22 @@ class StdPointCloudReader(BaseReader):
         static_points = np.array(static_points)
         n = len(static_points)
         dtype = [("x", np.float32), ("y", np.float32), ("z", np.float32),
-                ("red", np.uint8), ("green", np.uint8), ("blue", np.uint8), ("alpha", np.uint8)]
+                 ("red", np.uint8), ("green", np.uint8), ("blue", np.uint8), ("alpha", np.uint8)]
         static_pc = np.empty(n, dtype=dtype)
         static_pc["x"] = static_points[:, 0].astype(np.float32)
         static_pc["y"] = static_points[:, 1].astype(np.float32)
         static_pc["z"] = static_points[:, 2].astype(np.float32)
-        static_pc["red"] = np.clip(static_points[:, 3], 0, 255).astype(np.uint8)
-        static_pc["green"] = np.clip(static_points[:, 4], 0, 255).astype(np.uint8)
-        static_pc["blue"] = np.clip(static_points[:, 5], 0, 255).astype(np.uint8)
-        static_pc["alpha"] = np.clip(static_points[:, 6], 0, 255).astype(np.uint8)
+        static_pc["red"] = np.clip(
+            static_points[:, 3], 0, 255).astype(np.uint8)
+        static_pc["green"] = np.clip(
+            static_points[:, 4], 0, 255).astype(np.uint8)
+        static_pc["blue"] = np.clip(
+            static_points[:, 5], 0, 255).astype(np.uint8)
+        static_pc["alpha"] = np.clip(
+            static_points[:, 6], 0, 255).astype(np.uint8)
 
-        self._static_scene_cache = {"pcd_data": _SimplePCD(static_pc), "static_scene": True}
+        self._static_scene_cache = {
+            "pcd_data": _SimplePCD(static_pc), "static_scene": True}
         return self._static_scene_cache
 
     def _read_pose_data(self):

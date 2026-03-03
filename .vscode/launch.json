@@ -8,7 +8,7 @@
             "name": "convert-to-mcap",
             "type": "debugpy",
             "request": "launch",
-            "program": "foxglove_backend/tyro_cli.py",
+            "program": "lw_egosuite/tyro_cli.py",
             "console": "integratedTerminal",
             "args": "convert-to-mcap --path /home/lightwheel/project/devkit_dev/lw-egosuite-devkit/workdir --writer.path /home/lightwheel/project/devkit_dev/lw-egosuite-devkit/output/output.mcap"
         },

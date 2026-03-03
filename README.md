@@ -8,6 +8,15 @@
 
 ### Install
 
+**1. Conda environment**
+
+```bash
+conda create -n lw_egosuite_devkit python=3.11 -y
+conda activate lw_egosuite_devkit
+```
+
+**2. Install the package**
+
 **From PyPI:**
 
 ```bash
@@ -17,11 +26,9 @@ pip install lw-egosuite-devkit
 **From source:**
 
 ```bash
-cd lw_egosuite_devkit
-
-conda create -n lw_egosuite_devkit python=3.11 -y
-conda activate lw_egosuite_devkit
-pip3 install -e .
+git clone https://github.com/LightwheelAI/LW-Egosuite-DevKit.git
+cd LW-Egosuite-DevKit
+pip install -e .
 ```
 
 ## Usage
@@ -33,9 +40,9 @@ Generate visualization-ready MCAP files from raw egosuite MCAP data.
 #### 1.1 Single File Conversion
 
 ```bash
-cd lw_egosuite_devkit
+cd LW-Egosuite-DevKit
 mkdir output
-lwviz convert --path $input_mcap_path --writer.path $mcap_for_vis_path
+lw-egosuite convert --path $input_mcap_path --writer.path $mcap_for_vis_path
 ```
 
 * `$input_mcap_path`: The path to the source MCAP file.
@@ -44,7 +51,7 @@ lwviz convert --path $input_mcap_path --writer.path $mcap_for_vis_path
 #### 1.2 Batch Conversion
 
 ```bash
-cd lw_egosuite_devkit
+cd LW-Egosuite-DevKit
 mkdir -p output
 
 data_path="/path/to/your/data"
@@ -59,7 +66,7 @@ for input_mcap_path in "$data_path"/*.mcap; do
     echo "Processing: $base_name ..."
 
     # process the file
-    lwviz convert --path "$input_mcap_path" --writer.path "$mcap_for_vis_path"
+    lw-egosuite convert --path "$input_mcap_path" --writer.path "$mcap_for_vis_path"
 done
 ```
 

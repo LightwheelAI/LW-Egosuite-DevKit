@@ -1,3 +1,11 @@
+from .base_writer import BaseWriter, writer_process
+from .base_reader import BaseReader
+from typing import Any, Generator, Tuple, Union, Optional
+from dataclasses import dataclass
+from collections import defaultdict
+import setproctitle
+import math
+import heapq
 from abc import ABC, abstractmethod
 import logging
 import queue
@@ -5,16 +13,6 @@ import threading
 import multiprocessing as mp
 
 logger = logging.getLogger(__name__)
-import heapq
-import math
-import setproctitle
-from collections import defaultdict
-from dataclasses import dataclass
-from typing import Any, Generator, Tuple, Union, Optional
-
-from .base_reader import BaseReader
-
-from .base_writer import BaseWriter, writer_process
 
 
 PROCESSORS = defaultdict(list)
@@ -30,6 +28,7 @@ def process_worker(reses):
         except Exception as e:
             logger.exception("Error processing %s", src_topic)
     return buffer
+
 
 @dataclass(kw_only=True)
 class BasePipeline:
@@ -63,7 +62,7 @@ class BasePipeline:
 
     def run(self):
         self.worker_pool = mp.Pool(processes=self.concurrency,
-                                   initializer=lambda: setproctitle.setproctitle("lwviz worker"))
+                                   initializer=lambda: setproctitle.setproctitle("lw_egosuite worker"))
         self.pool_ref_getter_thread.start()
         self.writer_process.start()
         self._read_line_and_insert_to_worker_pool()

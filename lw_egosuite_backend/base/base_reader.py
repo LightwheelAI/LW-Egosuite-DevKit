@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Generator, Tuple, Optional
 
+
 @dataclass(kw_only=True)
 class BaseReader:
     raw_topic: str
@@ -22,7 +23,7 @@ class BaseReader:
         return self.generate_line()
 
     def match_processors(self):
-        from foxglove_backend.visualizers import get_visualization_generators, MessageTypes
+        from lw_egosuite_backend.visualizers import get_visualization_generators, MessageTypes
         extra_params = self.generateor_params or {}
         self.processors = get_visualization_generators(
             self.raw_topic, MessageTypes.PROTO,

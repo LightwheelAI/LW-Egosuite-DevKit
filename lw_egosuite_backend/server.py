@@ -1,5 +1,5 @@
-"""lwviz Static File Server Module
-Server logic extracted from cli.py to launch a static file server and open the lwviz website.
+"""lw_egosuite Static File Server Module
+Server logic extracted from cli.py to launch a static file server and open the lw_egosuite website.
 """
 import tornado.web
 import tornado.ioloop
@@ -54,10 +54,10 @@ class CORSStaticFileHandler(tornado.web.StaticFileHandler):
         self.finish()
 
 
-class lwvizFileServer:
-    """lwviz Static File Server
+class lw_egosuiteFileServer:
+    """lw_egosuite Static File Server
 Starts a static file server to serve MCAP files
-and automatically opens the lwviz website.
+and automatically opens the lw_egosuite website.
     """
 
     def __init__(
@@ -75,7 +75,7 @@ and automatically opens the lwviz website.
             hostname: Server hostname
             port: Server port
             server_only: If True, do not automatically open the browser
-            timestamp: Optional timestamp to navigate to a specific time in lwviz
+            timestamp: Optional timestamp to navigate to a specific time in lw_egosuite
             additional_files: Optional list of additional MCAP files to serve
         """
         self.file_path = Path(file_path).absolute()
@@ -111,8 +111,8 @@ and automatically opens the lwviz website.
         """Returns the data source type (fixed as \"mcap\")"""
         return "mcap-remote-file"
 
-    def _build_lwviz_url(self, actual_hostname: str, actual_port: int) -> str:
-        """Build lwviz URL with support for multiple files"""
+    def _build_lw_egosuite_url(self, actual_hostname: str, actual_port: int) -> str:
+        """Build lw_egosuite URL with support for multiple files"""
         ds = self._get_data_source_type()
 
         # Process hostname
@@ -136,7 +136,7 @@ and automatically opens the lwviz website.
         all_file_urls = ",".join(file_urls)
         file_urls_encoded = urllib.parse.quote(all_file_urls, safe='')
 
-        # Build lwviz URL
+        # Build lw_egosuite URL
         url = f"https://foxviz.lightwheel.net/?ds={ds}&ds.url={file_urls_encoded}"
 
         # Add default layout parameter
@@ -223,20 +223,21 @@ and automatically opens the lwviz website.
             additional_file_url = f"http://{actual_hostname}:{actual_port}/{additional_file.name}"
             file_urls.append(additional_file_url)
 
-        lwviz_url = self._build_lwviz_url(actual_hostname, actual_port)
+        lw_egosuite_url = self._build_lw_egosuite_url(
+            actual_hostname, actual_port)
 
         logger.info("%s", "=" * 60)
-        logger.info("lwviz web server started")
+        logger.info("lw_egosuite web server started")
         for i, file_url in enumerate(file_urls):
             if i == 0:
                 logger.info("Main file: %s", file_url)
             else:
                 logger.info("Additional file %d: %s", i, file_url)
         logger.info("%s", "=" * 60)
-        logger.info("lwviz URL: %s", lwviz_url)
+        logger.info("lw_egosuite URL: %s", lw_egosuite_url)
 
         # Open the browser (if not in server_only mode)
-        open_url(lwviz_url, not self.server_only)
+        open_url(lw_egosuite_url, not self.server_only)
 
         logger.info("Press Ctrl-C to stop the server")
 
@@ -255,15 +256,15 @@ def serve_file(
     server_only: bool = False,
     timestamp: Optional[float] = None,
 ) -> None:
-    """Convenience function: Start a file server and open the lwviz website
+    """Convenience function: Start a file server and open the lw_egosuite website
     Args:
         file_path: Path to the MCAP file
         hostname: Server hostname
         port: Server port
         server_only: If True, do not automatically open the browser
-        timestamp: Optional timestamp to navigate to a specific time in lwviz
+        timestamp: Optional timestamp to navigate to a specific time in lw_egosuite
     """
-    server = lwvizFileServer(
+    server = lw_egosuiteFileServer(
         file_path=file_path,
         hostname=hostname,
         port=port,
@@ -275,7 +276,7 @@ def serve_file(
 
 @dataclass
 class Show:
-    """Launch lwviz server to display MCAP file. If the input path is not an .mcap file, the data will be automatically converted to MCAP format.
+    """Launch lw_egosuite server to display MCAP file. If the input path is not an .mcap file, the data will be automatically converted to MCAP format.
     """
     in_path: Path = Path("./output/output.mcap")
     """Input path (can be a directory or an .mcap file)"""
@@ -302,7 +303,7 @@ class Show:
     """Start server only (do not open browser)"""
 
     timestamp: float = -1.0
-    """Timestamp located in lwviz"""
+    """Timestamp located in lw_egosuite"""
 
     def __post_init__(self):
         """Initialize post-processing"""
@@ -373,7 +374,7 @@ class Show:
                     f"Visualization file not found: {vis_file_path}")
 
         # Start server with both files
-        server = lwvizFileServer(
+        server = lw_egosuiteFileServer(
             file_path=file_path,
             hostname=self.hostname,
             port=self.port,

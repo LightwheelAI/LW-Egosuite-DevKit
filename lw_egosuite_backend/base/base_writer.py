@@ -34,7 +34,7 @@ class BaseWriter:
 
 
 def writer_process(writer: BaseWriter, writer_queue: mp.Queue):
-    setproctitle.setproctitle(f"lwviz writer")
+    setproctitle.setproctitle(f"lw_egosuite writer")
 
     def writer_queue_iter():
         while (msgs := writer_queue.get()) is not None:

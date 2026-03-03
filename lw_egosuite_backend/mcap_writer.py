@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from mcap.writer import Writer, CompressionType
-from foxglove_backend.proto import get_proto_descriptor_bin
+from lw_egosuite_backend.proto import get_proto_descriptor_bin
 from .base import BaseWriter
 import logging
 from pathlib import Path
