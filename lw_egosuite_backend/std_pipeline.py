@@ -32,12 +32,15 @@ class StdPipeline(BasePipeline):
 
     Usage:
         python -m lw_egosuite.std_pipeline \\
-            --path in.mcap \\
-            --writer.path out.mcap
+            --mcap in.mcap \\
+            --mcap_vis out.mcap
     """
 
-    path: Path
-    """Input MCAP path."""
+    mcap: Path
+    """Input MCAP file path."""
+
+    mcap_vis: Path = Path("./output/output_vis.mcap")
+    """Output path for the visualization MCAP file."""
 
     writer: MCAPWriter
     """MCAP writer for the output visualization file."""
@@ -45,8 +48,23 @@ class StdPipeline(BasePipeline):
     metadata_mcap: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
-        # Auto-set output path based on input filename if using default path
-        self.writer.set_output_path_from_input(self.path)
+        self.mcap = Path(self.mcap).resolve()
+        if self.mcap.is_dir():
+            raise ValueError(
+                f"--mcap must be an .mcap file path, not a directory: {self.mcap}. "
+                "Please specify the exact .mcap file."
+            )
+        if not self.mcap.is_file():
+            raise ValueError(f"MCAP file not found: {self.mcap}")
+
+        _default_vis = Path("./output/output_vis.mcap")
+        if self.mcap_vis.resolve() == _default_vis.resolve():
+            # Default: same directory as input
+            self.writer.path = self.mcap.parent / f"{self.mcap.stem}_vis.mcap"
+        else:
+            self.writer.path = self.mcap_vis.resolve()
+            if self.writer.path.is_dir():
+                self.writer.path = self.writer.path / f"{self.mcap.stem}_vis.mcap"
         super().__post_init__()
 
     def _load_session_metadata(self):
@@ -55,7 +73,7 @@ class StdPipeline(BasePipeline):
         schema used by existing pipelines.
         """
         self.metadata_mcap = {}
-        reader = make_reader(self.path.open(
+        reader = make_reader(self.mcap.open(
             "rb"), decoder_factories=[DecoderFactory()])
         session_msg = None
         session_ts = None
@@ -124,19 +142,19 @@ class StdPipeline(BasePipeline):
         # 1) Annotation: /annotation/per_frame -> subtask-annotation -> lightwheel.SubtaskAnnotation
         self._add_reader(
             StdAnnotationPerFrameReader(
-                file_path=self.path,
+                file_path=self.mcap,
                 raw_topic="subtask-annotation",
             )
         )
         self._add_reader(
             StdLowQualityReader(
-                file_path=self.path,
+                file_path=self.mcap,
                 raw_topic="low-quality-annotation",
             )
         )
 
         # 2) Pose topics -> shared reader -> tf / scene / head trajectory.
-        pose_reader = StdPoseDataReader(file_path=self.path)
+        pose_reader = StdPoseDataReader(file_path=self.mcap)
         self._add_reader(
             StdPoseTFReader(
                 pose_data_reader=pose_reader,
@@ -160,7 +178,7 @@ class StdPipeline(BasePipeline):
         # 3) Point cloud topics: read point clouds and generate static scene
         self._add_reader(
             StdPointCloudReader(
-                file_path=self.path,
+                file_path=self.mcap,
                 raw_topic="pointcloud/static",
             )
         )
@@ -176,7 +194,7 @@ def main():
     """
     CLI entry so that:
 
-        python -m lw_egosuite.std_pipeline --path in.mcap --writer.path out.mcap
+        python -m lw_egosuite.std_pipeline --mcap in.mcap --mcap_vis out.mcap
 
     works and behaves consistently with the other pipelines.
     """

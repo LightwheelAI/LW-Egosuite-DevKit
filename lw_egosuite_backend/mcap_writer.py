@@ -11,27 +11,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass(kw_only=True)
 class MCAPWriter(BaseWriter):
-    path: Path = Path("./output/output_vis.mcap")
-    """output path, should *.mcap"""
+    path: Path = Path("output_vis.mcap")
+    """Output path, should be *.mcap (set by pipeline when used from convert)."""
     compression: CompressionType = CompressionType.ZSTD
     """Compression algorithm to use"""
     metadata_dict: Dict[str, Dict[str, str]] = field(default_factory=dict)
     """File-level metadata, formatted as {name: {key: value}}"""
-
-    def set_output_path_from_input(self, input_path: Path):
-        """
-        Set output path based on input path.
-        Generates output filename as {input_filename}_vis.mcap
-        """
-        if self.path == Path("./output/output_vis.mcap"):
-            # Only auto-generate if using default path
-            # Use stem to get filename without extension
-
-            input_filename = input_path.stem
-            output_filename = f"{input_filename}_vis.mcap"
-            output_dir = input_path.parent / "output"
-            output_dir.mkdir(exist_ok=True)
-            self.path = output_dir / output_filename
 
     def setup(self):
         self.f = open(self.path, "wb")
