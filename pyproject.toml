@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lw-egosuite-devkit"
-version = "0.1.4"
+version = "0.1.5"
 description = "Lightwheel Egosuite DevKit - MCAP conversion and visualization pipeline"
 readme = "README.md"
 license = { text = "Apache-2.0" }

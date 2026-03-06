@@ -12,6 +12,7 @@ from lw_egosuite_backend.mcap_writer import MCAPWriter
 from lw_egosuite_backend.converters.std_mcap import (
     StdAnnotationPerFrameReader,
     StdLowQualityReader,
+    StdPerFramePointCloudReader,
     StdPointCloudReader,
 )
 from lw_egosuite_backend.converters.pose.std_mcap import (
@@ -175,11 +176,17 @@ class StdPipeline(BasePipeline):
             )
         )
 
-        # 3) Point cloud topics: read point clouds and generate static scene
+        # 3) Point cloud: static scene + per-frame (per frame: with data or empty)
         self._add_reader(
             StdPointCloudReader(
                 file_path=self.mcap,
                 raw_topic="pointcloud/static",
+            )
+        )
+        self._add_reader(
+            StdPerFramePointCloudReader(
+                file_path=self.mcap,
+                raw_topic="pointcloud/2d_projection",
             )
         )
 

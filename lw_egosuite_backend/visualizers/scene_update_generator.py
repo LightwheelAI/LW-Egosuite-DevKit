@@ -11,7 +11,7 @@ LOWER_BODY_BONES = [
     (0, 2), (2, 5), (5, 8), (8, 11),  # Right Leg
 ]
 
-# Upper-body skeleton: spine and arms + cam body的手腕单独画了
+# Upper-body skeleton: spine and arms; wrist of cam body is drawn separately
 UPPER_BODY_BONES = [
     (0, 3), (3, 6), (6, 9), (9, 12), (12, 15),  # Spine
     (9, 13), (13, 16), (16, 18), (18, 20),  # Left Arm

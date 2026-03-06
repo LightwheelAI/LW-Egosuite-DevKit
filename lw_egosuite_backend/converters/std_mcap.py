@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Generator, Tuple
+from typing import Any, Dict, Generator, Optional, Tuple
 
 import tqdm
 from mcap.reader import make_reader
@@ -48,11 +48,8 @@ class StdAnnotationPerFrameReader(BaseReader):
         - annotations: segments with description, skill, start_frame, end_frame.
         """
         # Build frame timeline first (needed for both formats and for out_start_frame/end_frame).
-        frame_timestamps = []
         raw_reader = make_reader(self.file_path.open("rb"))
-        for _schema, channel, message in raw_reader.iter_messages(topics=["/pose/body"]):
-            if channel.topic == "/pose/body":
-                frame_timestamps.append(int(getattr(message, "log_time", 0)))
+        frame_timestamps = _read_pose_body_frame_timestamps(raw_reader)
         total_frames = len(frame_timestamps)
         if not total_frames:
             return
@@ -60,19 +57,7 @@ class StdAnnotationPerFrameReader(BaseReader):
 
         episode_caption = ""
         segments = []
-        segment_topic = "/annotation/segments"
-        for item in self._reader.iter_decoded_messages(topics=[segment_topic]):
-            if hasattr(item, "channel"):
-                message = getattr(item, "message", None)
-                msg = getattr(item, "decoded_message", None) or message
-            else:
-                try:
-                    # type: ignore[misc]
-                    _schema, _channel, message, decoded_message = item
-                    msg = decoded_message or message
-                except ValueError:
-                    _topic, msg, _src_ts = item  # type: ignore[misc]
-
+        for msg, _ in _iter_decoded(self._reader, "/annotation/segments"):
             seg = getattr(msg, "segment", None)
             if seg is None:
                 continue
@@ -197,30 +182,13 @@ class StdLowQualityReader(BaseReader):
         )
 
     def generate_line(self) -> Generator[Tuple[str, Any, int], Any, None]:
-        # 1) Build frame index -> timestamp map from /pose/body.
-        frame_timestamps = []
         raw_reader = make_reader(self.file_path.open("rb"))
-        for _schema, channel, message in raw_reader.iter_messages(topics=["/pose/body"]):
-            if channel.topic == "/pose/body":
-                frame_timestamps.append(int(getattr(message, "log_time", 0)))
-
+        frame_timestamps = _read_pose_body_frame_timestamps(raw_reader)
         if not frame_timestamps:
             return
 
-        # 2) Read low-quality summary and aggregate multiple problem types per frame.
         frame_to_types = {}
-        for item in self._reader.iter_decoded_messages(topics=["/annotation/low_quality"]):
-            if hasattr(item, "channel"):
-                msg = getattr(item, "decoded_message", None) or getattr(
-                    item, "message", None)
-            else:
-                try:
-                    # type: ignore[misc]
-                    _schema, _channel, _message, decoded_message = item
-                    msg = decoded_message
-                except ValueError:
-                    _topic, msg, _ts = item  # type: ignore[misc]
-
+        for msg, _ in _iter_decoded(self._reader, "/annotation/low_quality"):
             problem_types = list(getattr(msg, "problem_types", []) or [])
             for pt in problem_types:
                 name = str(getattr(pt, "name", "unknown"))
@@ -244,7 +212,7 @@ class StdLowQualityReader(BaseReader):
             }, ts_ns
 
 
-def _voxel_key(x, y, z, voxel_size):
+def _voxel_key(x: float, y: float, z: float, voxel_size: float):
     """Voxel grid key (i, j, k)."""
     return (int(x / voxel_size), int(y / voxel_size), int(z / voxel_size))
 
@@ -277,79 +245,18 @@ class StdPointCloudReader(BaseReader):
         self._reader = make_reader(self.file_path.open(
             "rb"), decoder_factories=[DecoderFactory()])
 
-    def _pointcloud_msg_to_numpy(self, pointcloud_msg):
-        """Convert foxglove.PointCloud message to numpy structured array."""
-        if not pointcloud_msg.data:
-            return None
-
-        # Parse point cloud fields
-        fields = {}
-        for field in pointcloud_msg.fields:
-            fields[field.name] = {"offset": field.offset, "type": field.type}
-
-        # Extract point data
-        point_stride = pointcloud_msg.point_stride
-        data = pointcloud_msg.data
-        num_points = len(data) // point_stride
-
-        if num_points == 0:
-            return None
-
-        # Build dtype based on fields
-        dtype = []
-        for field_name, field_info in fields.items():
-            if field_info["type"] == 7:  # FLOAT32
-                dtype.append((field_name, np.float32))
-            elif field_info["type"] == 1:  # UINT8
-                dtype.append((field_name, np.uint8))
-
-        if not dtype:
-            return None
-
-        # Create structured array
-        points = np.zeros(num_points, dtype=dtype)
-
-        for i in range(num_points):
-            byte_offset = i * point_stride
-            for field_name, field_info in fields.items():
-                field_offset = byte_offset + field_info["offset"]
-                if field_info["type"] == 7:  # FLOAT32
-                    value = struct.unpack(
-                        '<f', data[field_offset:field_offset+4])[0]
-                    points[field_name][i] = value
-                elif field_info["type"] == 1:  # UINT8
-                    value = data[field_offset]
-                    points[field_name][i] = value
-
-        return points
-
     def generate_line(self) -> Generator[Tuple[str, Any, int], Any, None]:
         """
         Read point cloud messages from MCAP and generate both per-frame and static scene point clouds.
         """
 
-        # First pass: collect all point cloud data
-        pointcloud_topic = "/pointcloud"
-        for item in tqdm.tqdm(
-            self._reader.iter_decoded_messages(topics=[pointcloud_topic]),
+        for msg, timestamp in tqdm.tqdm(
+            _iter_decoded(self._reader, "/pointcloud"),
             desc="pointcloud",
             miniters=10,
             mininterval=0.5,
         ):
-            if hasattr(item, "channel"):
-                message = getattr(item, "message", None)
-                msg = getattr(item, "decoded_message", None) or message
-                timestamp = int(getattr(message, "log_time", 0))
-            else:
-                try:
-                    _schema, _channel, message, decoded_message = item
-                    msg = decoded_message or message
-                    timestamp = int(getattr(message, "log_time", 0))
-                except ValueError:
-                    _topic, msg, timestamp = item
-
-            # Convert point cloud message to numpy array
-            pc_data = self._pointcloud_msg_to_numpy(msg)
+            pc_data = _pointcloud_msg_to_numpy(msg)
             if pc_data is not None:
                 self._frame_pointclouds.append(pc_data)
                 self._frame_timestamps.append(timestamp)
@@ -454,8 +361,8 @@ class StdPointCloudReader(BaseReader):
             "pcd_data": _SimplePCD(static_pc), "static_scene": True}
         return self._static_scene_cache
 
-    def _read_pose_data(self):
-        """Read pose data from MCAP file."""
+    def _read_pose_data(self) -> Dict[int, list]:
+        """Read hand pose data from MCAP (left + right), keyed by timestamp."""
         def _tf_to_dict(tf_obj: Any) -> Dict[str, Any]:
             quat = getattr(tf_obj, "quat", None)
             return {
@@ -469,42 +376,20 @@ class StdPointCloudReader(BaseReader):
                     "z": float(getattr(quat, "z", 0.0)),
                 },
             }
-        pose_data = {
-        }
 
-        left_hand_pose_topic = "/pose/left_hand"
-
-        for item in self._reader.iter_decoded_messages(topics=[left_hand_pose_topic]):
-            message = getattr(item, "message", None)
-            msg = getattr(item, "decoded_message", None) or message
-            timestamp = int(getattr(message, "log_time", 0))
-
+        def append_poses(pose_data: dict, msg: Any, timestamp: int):
             transforms = list(getattr(msg, "transforms", []))
             tf_dicts = [_tf_to_dict(tf_obj) for tf_obj in transforms]
-
-            pose_data[timestamp] = []
+            if timestamp not in pose_data:
+                pose_data[timestamp] = []
             for pose in tf_dicts:
-                pose_data[timestamp].append({
-                    'x': pose['x'],
-                    'y': pose['y'],
-                    'z': pose['z']
-                })
+                pose_data[timestamp].append({"x": pose["x"], "y": pose["y"], "z": pose["z"]})
 
-        right_hand_pose_topic = "/pose/right_hand"
-        for item in self._reader.iter_decoded_messages(topics=[right_hand_pose_topic]):
-            message = getattr(item, "message", None)
-            msg = getattr(item, "decoded_message", None) or message
-            timestamp = int(getattr(message, "log_time", 0))
-
-            transforms = list(getattr(msg, "transforms", []))
-            tf_dicts = [_tf_to_dict(tf_obj) for tf_obj in transforms]
-
-            for pose in tf_dicts:
-                pose_data[timestamp].append({
-                    'x': pose['x'],
-                    'y': pose['y'],
-                    'z': pose['z']
-                })
+        pose_data = {}
+        for msg, timestamp in _iter_decoded(self._reader, "/pose/left_hand"):
+            append_poses(pose_data, msg, timestamp)
+        for msg, timestamp in _iter_decoded(self._reader, "/pose/right_hand"):
+            append_poses(pose_data, msg, timestamp)
         return pose_data
 
     def _get_frame_pose(self, pose_data, frame_idx):
@@ -534,3 +419,130 @@ class StdPointCloudReader(BaseReader):
         for pos in frame_pose:
             hand_positions.append(np.array([pos['x'], pos['y'], pos['z']]))
         return hand_positions
+
+
+# -----------------------------------------------------------------------------
+# Shared helpers (MCAP iteration, point cloud conversion)
+# -----------------------------------------------------------------------------
+
+def _pointcloud_msg_to_numpy(pointcloud_msg) -> Optional[np.ndarray]:
+    """Convert foxglove.PointCloud message to numpy structured array."""
+    if not pointcloud_msg.data:
+        return None
+    fields = {}
+    for field in pointcloud_msg.fields:
+        fields[field.name] = {"offset": field.offset, "type": field.type}
+    point_stride = pointcloud_msg.point_stride
+    data = pointcloud_msg.data
+    num_points = len(data) // point_stride
+    if num_points == 0:
+        return None
+    dtype = []
+    for field_name, field_info in fields.items():
+        if field_info["type"] == 7:  # FLOAT32
+            dtype.append((field_name, np.float32))
+        elif field_info["type"] == 1:  # UINT8
+            dtype.append((field_name, np.uint8))
+    if not dtype:
+        return None
+    points = np.zeros(num_points, dtype=dtype)
+    for i in range(num_points):
+        byte_offset = i * point_stride
+        for field_name, field_info in fields.items():
+            field_offset = byte_offset + field_info["offset"]
+            if field_info["type"] == 7:
+                points[field_name][i] = struct.unpack("<f", data[field_offset : field_offset + 4])[0]
+            elif field_info["type"] == 1:
+                points[field_name][i] = data[field_offset]
+    return points
+
+
+def _read_pose_body_frame_timestamps(reader) -> list:
+    """Read frame timestamps from /pose/body on the given reader."""
+    out = []
+    for _schema, channel, message in reader.iter_messages(topics=["/pose/body"]):
+        if channel.topic == "/pose/body":
+            out.append(int(getattr(message, "log_time", 0)))
+    return out
+
+
+def _iter_decoded(reader, topic: str) -> Generator[Tuple[Any, int], None, None]:
+    """Iterate decoded messages for topic; yield (decoded_msg, log_time_ns)."""
+    for item in reader.iter_decoded_messages(topics=[topic]):
+        if hasattr(item, "channel"):
+            message = getattr(item, "message", None)
+            msg = getattr(item, "decoded_message", None) or message
+            ts = int(getattr(message, "log_time", 0))
+        else:
+            try:
+                _s, _c, message, decoded_message = item
+                msg = decoded_message or message
+                ts = int(getattr(message, "log_time", 0))
+            except ValueError:
+                _topic, msg, ts = item
+        yield msg, ts
+
+
+@dataclass(kw_only=True)
+class StdPerFramePointCloudReader(BaseReader):
+    """
+    Emit one point cloud message per frame (from /pose/body). Frames with point cloud
+    data get that data; frames without get an empty PointCloud.
+    """
+
+    file_path: Path
+    raw_topic: str = "pointcloud/2d_projection"
+    max_time_diff_ns: int = 100_000_000  # 100ms
+
+    def setup(self):
+        self._reader = make_reader(
+            self.file_path.open("rb"), decoder_factories=[DecoderFactory()]
+        )
+
+    def match_processors(self):
+        from lw_egosuite_backend.visualizers import (
+            get_visualization_generators,
+            MessageTypes,
+        )
+        self.processors = get_visualization_generators(
+            self.raw_topic, MessageTypes.PROTO
+        )
+
+    def generate_line(self) -> Generator[Tuple[str, Any, int], Any, None]:
+        frame_timestamps = _read_pose_body_frame_timestamps(self._reader)
+        if not frame_timestamps:
+            return
+
+        pc_list: list = []
+        for msg, timestamp in _iter_decoded(self._reader, "/pointcloud"):
+            pc_data = _pointcloud_msg_to_numpy(msg)
+            if pc_data is not None:
+                pc_list.append((timestamp, pc_data))
+
+        max_diff = self.max_time_diff_ns
+        # Time alignment: assign each point cloud to the temporally closest frame
+        # (within 100ms); at most one pc per frame; unmatched frames get empty.
+        frame_to_pc: Dict[int, Tuple[int, Any]] = {}  # frame_ts -> (pc_ts, pc_data)
+        for pc_ts, pc_data in pc_list:
+            best_frame_ts = None
+            best_diff = max_diff + 1
+            for frame_ts in frame_timestamps:
+                d = abs(pc_ts - frame_ts)
+                if d < best_diff:
+                    best_diff = d
+                    best_frame_ts = frame_ts
+            if best_frame_ts is None:
+                continue
+            # If multiple pcs claim the same frame, keep the one with smaller time diff
+            existing = frame_to_pc.get(best_frame_ts)
+            if existing is None or best_diff < abs(existing[0] - best_frame_ts):
+                frame_to_pc[best_frame_ts] = (pc_ts, pc_data)
+
+        for frame_ts in frame_timestamps:
+            assigned = frame_to_pc.get(frame_ts)
+            if assigned is not None:
+                _pc_ts, pc_data = assigned
+                payload = {"pcd_data": _SimplePCD(pc_data), "static_scene": False}
+            else:
+                payload = {"pcd_data": None, "static_scene": False}
+            yield self.raw_topic, payload, frame_ts

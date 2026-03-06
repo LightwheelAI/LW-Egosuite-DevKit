@@ -1,144 +1,142 @@
 import logging
 from . import Generator, register
-from typing import Dict
+from typing import Dict, Any
 import numpy as np
 import struct
 
 logger = logging.getLogger(__name__)
 
 
+def _fill_pointcloud_header(msg: Any, secs: int, nsecs: int) -> None:
+    """Fill timestamp, frame_id and identity pose on a foxglove.PointCloud message."""
+    msg.timestamp.seconds = secs
+    msg.timestamp.nanos = nsecs
+    msg.frame_id = "world"
+    msg.pose.position.x = 0.0
+    msg.pose.position.y = 0.0
+    msg.pose.position.z = 0.0
+    msg.pose.orientation.w = 1.0
+    msg.pose.orientation.x = 0.0
+    msg.pose.orientation.y = 0.0
+    msg.pose.orientation.z = 0.0
+
+
+def _fill_pointcloud_from_pc_data(msg: Any, pcd_data: Any, packed_field_cls: type) -> None:
+    """
+    Fill msg.fields, msg.point_stride, msg.data from pcd_data.pc_data (structured array).
+    If pcd_data is None or empty, set point_stride=0 and data=b\"\".
+    """
+    if pcd_data is None:
+        msg.point_stride = 0
+        msg.data = b""
+        return
+    points = pcd_data.pc_data
+    if points.size == 0 or len(points) == 0:
+        msg.point_stride = 0
+        msg.data = b""
+        return
+    num_points = len(points)
+    fields = []
+    point_data_list = []
+    offset = 0
+    if hasattr(points.dtype, "names") and points.dtype.names:
+        field_names = list(points.dtype.names)
+        has_rgba = all(f in field_names for f in ["red", "green", "blue", "alpha"])
+        for field_name in field_names:
+            if field_name in ["x", "y", "z"]:
+                f = packed_field_cls()
+                f.name = field_name
+                f.offset = offset
+                f.type = packed_field_cls.FLOAT32
+                fields.append(f)
+                point_data_list.append(points[field_name].astype(np.float32))
+                offset += 4
+        if has_rgba:
+            for name in ["red", "green", "blue", "alpha"]:
+                f = packed_field_cls()
+                f.name = name
+                f.offset = offset
+                f.type = packed_field_cls.UINT8
+                fields.append(f)
+                point_data_list.append(points[name].astype(np.uint8))
+                offset += 1
+    for field in fields:
+        msg.fields.append(field)
+    msg.point_stride = offset
+    packed_data = bytearray(num_points * offset)
+    for i in range(num_points):
+        byte_offset = i * offset
+        for j, field_data in enumerate(point_data_list):
+            o = fields[j].offset
+            value = field_data[i]
+            if fields[j].type == packed_field_cls.FLOAT32:
+                struct.pack_into("<f", packed_data, byte_offset + o, float(value))
+            elif fields[j].type == packed_field_cls.UINT32:
+                struct.pack_into("<I", packed_data, byte_offset + o, int(value))
+            elif fields[j].type == packed_field_cls.UINT8:
+                struct.pack_into("<B", packed_data, byte_offset + o, int(value))
+    msg.data = bytes(packed_data)
+
+
 @register("pointcloud/static")
 class StdPCDStaticGenerator(Generator):
-    """Generator to convert MCAP static point cloud data into foxglove.PointCloud messages"""
+    """Generator to convert MCAP static point cloud data into foxglove.PointCloud messages."""
 
     @property
     def outputs(self) -> Dict[str, str]:
-        return dict({
-            self.output_topic_name: "foxglove.PointCloud"
-        })
+        return {self.output_topic_name: "foxglove.PointCloud"}
 
     def setup(self, **kwargs):
         self.output_topic_name = "/pointcloud/static"
         self.pointcloud_cls = self.get_message_type("foxglove.PointCloud")
-        self.packed_field_cls = self.get_message_type(
-            "foxglove.PackedElementField")
+        self.packed_field_cls = self.get_message_type("foxglove.PackedElementField")
 
     def generate(self, data, timestamp):
-        """Convert MCAP static point cloud data to foxglove.PointCloud message"""
         if not isinstance(data, dict):
             return
-
-        # Check if this is a static scene point cloud
-        is_static_scene = data.get('static_scene', False)
-        if not is_static_scene:
+        if not data.get("static_scene", False):
             return
-
-        pcd_data = data.get('pcd_data')
+        pcd_data = data.get("pcd_data")
         if pcd_data is None:
             return
-
-        # Create PointCloud message
-        pointcloud_msg = self.pointcloud_cls()
-
-        # Set timestamp
-        secs, nsecs = self.ns2sec_nsec(timestamp)
-        pointcloud_msg.timestamp.seconds = secs
-        pointcloud_msg.timestamp.nanos = nsecs
-
-        # Set frame_id
-        pointcloud_msg.frame_id = "world"
-
-        # Set default pose (identity matrix, no rotation or translation)
-        pointcloud_msg.pose.position.x = 0.0
-        pointcloud_msg.pose.position.y = 0.0
-        pointcloud_msg.pose.position.z = 0.0
-        pointcloud_msg.pose.orientation.w = 1.0
-        pointcloud_msg.pose.orientation.x = 0.0
-        pointcloud_msg.pose.orientation.y = 0.0
-        pointcloud_msg.pose.orientation.z = 0.0
-
-        # Get point cloud data
         try:
-            # PointCloud object from pypcd4, using pc_data (structured array) instead of numpy()
-            points = pcd_data.pc_data
-
-            # Check point cloud data
-            if points.size == 0:
-                return
-
-            num_points = len(points)
-            if num_points == 0:
-                return
-
-            # Determine fields and data
-            # pcd_data.pc_data is a structured array with field names.
-            fields = []
-            point_data_list = []
-            offset = 0
-
-            # Check whether it is a structured array (with field names).
-            if hasattr(points.dtype, 'names') and points.dtype.names:
-                # Structured array with named fields
-                field_names = list(points.dtype.names)
-
-                # Check if pre-converted r, g, b, a fields exist.
-                has_rgba_preprocessed = all(
-                    f in field_names for f in ['red', 'green', 'blue', 'alpha'])
-
-                for field_name in field_names:
-                    field_data = points[field_name]
-
-                    if field_name in ['x', 'y', 'z']:
-                        # Coordinate field, using FLOAT32
-                        field = self.packed_field_cls()
-                        field.name = field_name
-                        field.offset = offset
-                        field.type = self.packed_field_cls.FLOAT32
-                        fields.append(field)
-                        point_data_list.append(field_data.astype(np.float32))
-                        offset += 4
-
-                if has_rgba_preprocessed:
-                    # Add color fields
-                    for name, key in [('red', 'red'), ('green', 'green'), ('blue', 'blue'), ('alpha', 'alpha')]:
-                        field = self.packed_field_cls()
-                        field.name = name
-                        field.offset = offset
-                        field.type = self.packed_field_cls.UINT8
-                        fields.append(field)
-                        point_data_list.append(points[key].astype(np.uint8))
-                        offset += 1
-
-            # Add fields to pointcloud message
-            for field in fields:
-                pointcloud_msg.fields.append(field)
-
-            # Set point stride
-            point_stride = offset
-            pointcloud_msg.point_stride = point_stride
-
-            # Pack data
-            packed_data = bytearray(num_points * point_stride)
-            for i in range(num_points):
-                byte_offset = i * point_stride
-                for j, field_data in enumerate(point_data_list):
-                    field = fields[j]
-                    value = field_data[i]
-                    if field.type == self.packed_field_cls.FLOAT32:
-                        struct.pack_into(
-                            "<f", packed_data, byte_offset + field.offset, float(value))
-                    elif field.type == self.packed_field_cls.UINT32:
-                        struct.pack_into(
-                            "<I", packed_data, byte_offset + field.offset, int(value))
-                    elif field.type == self.packed_field_cls.UINT8:
-                        struct.pack_into(
-                            "<B", packed_data, byte_offset + field.offset, int(value))
-
-            pointcloud_msg.data = bytes(packed_data)
-
-            # Yield the message
-            yield self.output_topic_name, pointcloud_msg
-
+            msg = self.pointcloud_cls()
+            _fill_pointcloud_header(msg, *self.ns2sec_nsec(timestamp))
+            _fill_pointcloud_from_pc_data(msg, pcd_data, self.packed_field_cls)
+            yield self.output_topic_name, msg
         except Exception as e:
-            logger.error(f"Error converting static point cloud data: {e}")
+            logger.error("Error converting static point cloud data: %s", e)
+
+
+@register("pointcloud/2d_projection")
+class StdPCDPerFrameGenerator(Generator):
+    """
+    Per-frame point cloud: one message per frame; with data when available,
+    empty PointCloud (0 points) otherwise so nothing is visible in the viewer.
+    """
+
+    @property
+    def outputs(self) -> Dict[str, str]:
+        return {self.output_topic_name: "foxglove.PointCloud"}
+
+    def setup(self, **kwargs):
+        self.output_topic_name = "/pointcloud/2d_projection"
+        self.pointcloud_cls = self.get_message_type("foxglove.PointCloud")
+        self.packed_field_cls = self.get_message_type("foxglove.PackedElementField")
+
+    def generate(self, data, timestamp):
+        if not isinstance(data, dict):
             return
+        if data.get("static_scene", True):
+            return
+        msg = self.pointcloud_cls()
+        _fill_pointcloud_header(msg, *self.ns2sec_nsec(timestamp))
+        pcd_data = data.get("pcd_data")
+        try:
+            _fill_pointcloud_from_pc_data(msg, pcd_data, self.packed_field_cls)
+            yield self.output_topic_name, msg
+        except Exception as e:
+            logger.error("Error converting per-frame point cloud: %s", e)
+            msg.point_stride = 0
+            msg.data = b""
+            yield self.output_topic_name, msg
