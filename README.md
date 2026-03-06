@@ -70,9 +70,21 @@ done
 
 * `$data_path`: The directory containing the source MCAP files. Each file will be converted and saved with a `_vis.mcap` suffix in the **same directory** as the source file.
 
-### 2. Reading from MCAP
+### 2. Visualization with Foxglove Studio
 
-#### 2.1 Export Video (CLI)
+Follow these steps to visualize the processed data in [Foxglove Studio](https://app.foxglove.dev/):
+
+1. **Launch Foxglove**: Open the Foxglove Studio desktop application or web version.
+2. **Import Layout**: Load the recommended configuration file: `assets/default_layout.json`.
+3. **Load Data Streams**: Simultaneously load the source file `mcap_filename.mcap` and the generated visualization file `{mcap_filename}_vis.mcap` (in the same directory as the source by default).
+
+Once loaded, the visualization will appear in the Foxglove Studio dashboard as shown below:
+
+![image](assets/demo.jpg)
+
+### 3. Reading from MCAP
+
+#### 3.1 Export Video (CLI)
 
 Export video requires **ffmpeg** on PATH. If not installed:
 
@@ -92,7 +104,7 @@ lw-egosuite export-video --mcap path/to/file.mcap --output output.mp4
 | `--output` | Output MP4 file path |
 | `--topic` | (Optional) CompressedVideo topic to export. Default: `/sensor/camera/head_left/video` |
 
-#### 2.2 Iterate decoded messages (Python API)
+#### 3.2 Iterate decoded messages (Python API)
 
 Iterate decoded proto messages with the built-in reader:
 
@@ -107,7 +119,7 @@ for m in iter_messages("out.mcap", topics=["/pose/body"]):
     print(m.topic, m.message)
 ```
 
-#### 2.3 Decoding camera video frames (Python API)
+#### 3.3 Decoding camera video frames (Python API)
 
 Camera streams are stored as `foxglove.CompressedVideo` messages on topics such as:
 
@@ -138,18 +150,6 @@ for frame in iter_video_frames(
 
 - Video decoding requires **ffmpeg** and **ffprobe** on PATH.
 - `numpy` is required; `torch` is only required when `output="torch"`.
-
-### 3. Visualization with Foxglove Studio
-
-Follow these steps to visualize the processed data in [Foxglove Studio](https://app.foxglove.dev/):
-
-1. **Launch Foxglove**: Open the Foxglove Studio desktop application or web version.
-2. **Import Layout**: Load the recommended configuration file: `assets/default_layout.json`.
-3. **Load Data Streams**: Simultaneously load the source file `mcap_filename.mcap` and the generated visualization file `{mcap_filename}_vis.mcap` (in the same directory as the source by default).
-
-Once loaded, the visualization will appear in the Foxglove Studio dashboard as shown below:
-
-![image](assets/demo.jpg)
 
 ## License
 
