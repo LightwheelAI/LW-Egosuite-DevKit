@@ -1,5 +1,91 @@
 from . import Generator, register
-from typing import Dict
+from typing import Any, Dict, List
+
+
+def _wrap_line(line: str, max_chars: int) -> str:
+    line = (line or "").strip()
+    if not line or max_chars <= 0:
+        return line
+    if len(line) <= max_chars:
+        return line
+
+    words = line.split()
+    if not words:
+        # No whitespace; hard wrap.
+        return "\n".join(line[i: i + max_chars] for i in range(0, len(line), max_chars))
+
+    out_lines: List[str] = []
+    cur: List[str] = []
+    cur_len = 0
+
+    for w in words:
+        # Hard-wrap very long tokens.
+        if len(w) > max_chars:
+            if cur:
+                out_lines.append(" ".join(cur))
+                cur = []
+                cur_len = 0
+            out_lines.extend(w[i: i + max_chars]
+                             for i in range(0, len(w), max_chars))
+            continue
+
+        add_len = len(w) if not cur else (1 + len(w))
+        if cur_len + add_len <= max_chars:
+            cur.append(w)
+            cur_len += add_len
+        else:
+            out_lines.append(" ".join(cur))
+            cur = [w]
+            cur_len = len(w)
+
+    if cur:
+        out_lines.append(" ".join(cur))
+    return "\n".join(out_lines)
+
+
+def _wrap_text(text: str, max_chars_per_line: int) -> str:
+    # Preserve existing newlines; wrap each line separately.
+    lines = (text or "").splitlines() or [""]
+    return "\n".join(_wrap_line(line, max_chars_per_line) for line in lines).strip()
+
+
+def _add_wrapped_text(
+    image_annotations_msg: Any,
+    *,
+    sec: int,
+    nanos: int,
+    x: float,
+    base_y: float,
+    text: str,
+    font_size: float,
+    line_spacing: float,
+    text_rgba: tuple,
+    bg_rgba: tuple,
+) -> None:
+    """
+    Add wrapped text as multiple TextAnnotations (one line each).
+    This guarantees the first line stays at base_y across renderers.
+    """
+    lines = (text or "").splitlines() or [""]
+    line_h = float(font_size) * float(line_spacing)
+    for i, line in enumerate(lines):
+        t = image_annotations_msg.texts.add()
+        t.timestamp.seconds = sec
+        t.timestamp.nanos = nanos
+        t.position.x = float(x)
+        t.position.y = float(base_y) + i * line_h
+        t.text = line
+        t.font_size = float(font_size)
+        tr, tg, tb, ta = text_rgba
+        br, bg, bb, ba = bg_rgba
+        t.text_color.r = tr
+        t.text_color.g = tg
+        t.text_color.b = tb
+        t.text_color.a = ta
+        t.background_color.r = br
+        t.background_color.g = bg
+        t.background_color.b = bb
+        t.background_color.a = ba
 
 
 @register("subtask-annotation")
@@ -61,48 +147,54 @@ class AnnotationsGenerator(Generator):
                 caption_part = (annotation_dict.get("caption") or "").strip()
                 desc_line = desc_part
                 if skill_part:
-                    desc_line += ("\n" if desc_line else "") + "skill: " + skill_part
+                    desc_line += ("\n" if desc_line else "") + \
+                        "skill: " + skill_part
             else:
                 desc_line = str(description).strip() if description else ""
                 caption_part = ""
 
-            # caption: always top line, fixed y so it never moves. desc: fixed y below caption.
+            # caption: first line at CAPTION_Y; description starts below caption (or at CAPTION_Y if no caption).
             has_desc = bool(desc_line and has_annotation)
             has_caption = bool(caption_part)
             CAPTION_Y = 80
-            DESC_Y = 150
+            CAPTION_FONT_SIZE = 36
+            CAPTION_LINE_SPACING = 1.0
+            DESC_FONT_SIZE = 46  # description font size
+            DESC_GAP = 20  # gap between last caption line and first description line
             if has_caption:
-                cap = image_annotations_msg.texts.add()
-                cap.timestamp.seconds = sec
-                cap.timestamp.nanos = nanos
-                cap.position.x = 50
-                cap.position.y = CAPTION_Y
-                cap.text = caption_part
-                cap.font_size = 36
-                cap.text_color.r = 255 / 255.0
-                cap.text_color.g = 255 / 255.0
-                cap.text_color.b = 255 / 255.0
-                cap.text_color.a = 1
-                cap.background_color.r = 40 / 255.0
-                cap.background_color.g = 40 / 255.0
-                cap.background_color.b = 40 / 255.0
-                cap.background_color.a = 1
+                wrapped_cap = _wrap_text(caption_part, max_chars_per_line=80)
+                _add_wrapped_text(
+                    image_annotations_msg,
+                    sec=sec,
+                    nanos=nanos,
+                    x=50,
+                    base_y=CAPTION_Y,
+                    text=wrapped_cap,
+                    font_size=CAPTION_FONT_SIZE,
+                    line_spacing=CAPTION_LINE_SPACING,
+                    text_rgba=(1.0, 1.0, 1.0, 1.0),
+                    bg_rgba=(40 / 255.0, 40 / 255.0, 40 / 255.0, 0.8),
+                )
+                caption_line_count = max(1, len(wrapped_cap.splitlines()))
+                caption_bottom_y = CAPTION_Y + caption_line_count * \
+                    (CAPTION_FONT_SIZE * CAPTION_LINE_SPACING)
+            else:
+                caption_bottom_y = CAPTION_Y
             if has_desc:
-                text = image_annotations_msg.texts.add()
-                text.timestamp.seconds = sec
-                text.timestamp.nanos = nanos
-                text.position.x = 50
-                text.position.y = DESC_Y
-                text.text = desc_line
-                text.font_size = 50
-                text.text_color.r = 255 / 255.0
-                text.text_color.g = 255 / 255.0
-                text.text_color.b = 255 / 255.0
-                text.text_color.a = 1
-                text.background_color.r = 40 / 255.0
-                text.background_color.g = 40 / 255.0
-                text.background_color.b = 40 / 255.0
-                text.background_color.a = 1
+                wrapped = _wrap_text(desc_line, max_chars_per_line=60)
+                desc_base_y = caption_bottom_y + DESC_GAP if has_caption else CAPTION_Y
+                _add_wrapped_text(
+                    image_annotations_msg,
+                    sec=sec,
+                    nanos=nanos,
+                    x=50,
+                    base_y=desc_base_y,
+                    text=wrapped,
+                    font_size=DESC_FONT_SIZE,
+                    line_spacing=1.0,
+                    text_rgba=(1.0, 1.0, 1.0, 1.0),
+                    bg_rgba=(40 / 255.0, 40 / 255.0, 40 / 255.0, 0.8),
+                )
 
         yield f"{prefix}/subtask_annotation", subtask_msg
         if has_desc or has_caption:
