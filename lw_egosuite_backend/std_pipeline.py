@@ -196,6 +196,17 @@ class StdPipeline(BasePipeline):
         if self.metadata_mcap:
             self.writer.add_metadata("metadata", self.metadata_mcap)
 
+    def run(self):
+        """Run the pipeline and post-process the output."""
+        super().run()
+
+        # Post-process: remove not-used (empty) topics
+        from .postprocess import postprocess_mcap
+        output_path = self.writer.path
+        logger.info(f"Post-processing {output_path}")
+        postprocess_mcap(str(output_path))
+        logger.info("Post-processing complete")
+
 
 def main():
     """

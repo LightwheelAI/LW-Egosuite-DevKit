@@ -200,6 +200,10 @@ class StdLowQualityReader(BaseReader):
                         continue
                     frame_to_types.setdefault(idx, []).append(name)
 
+        # Skip entirely if no low-quality annotations exist
+        if not frame_to_types:
+            return
+
         # 3) Emit one message per frame so empty frames clear previous text.
         for frame_idx in range(len(frame_timestamps)):
             ts_ns = int(frame_timestamps[frame_idx])
@@ -728,11 +732,16 @@ def _pointcloud_msg_to_numpy(pointcloud_msg) -> Optional[np.ndarray]:
 
 
 def _read_pose_body_frame_timestamps(reader) -> list:
-    """Read frame timestamps from /pose/body on the given reader."""
+    """Read frame timestamps from /pose/head_pose on the given reader."""
     out = []
-    for _schema, channel, message in reader.iter_messages(topics=["/pose/body"]):
-        if channel.topic == "/pose/body":
+    for _schema, channel, message in reader.iter_messages(topics=["/pose/head_pose"]):
+        if channel.topic == "/pose/head_pose":
             out.append(int(getattr(message, "log_time", 0)))
+    if not out:
+        raise ValueError(
+            "No /pose/head_pose messages found in input MCAP. "
+            "Cannot build frame timeline for annotation visualization."
+        )
     return out
 
 

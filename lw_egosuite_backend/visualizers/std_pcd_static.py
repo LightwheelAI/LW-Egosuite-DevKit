@@ -129,9 +129,11 @@ class StdPCDPerFrameGenerator(Generator):
             return
         if data.get("static_scene", True):
             return
+        pcd_data = data.get("pcd_data")
+        if pcd_data is None:
+            return
         msg = self.pointcloud_cls()
         _fill_pointcloud_header(msg, *self.ns2sec_nsec(timestamp))
-        pcd_data = data.get("pcd_data")
         try:
             _fill_pointcloud_from_pc_data(msg, pcd_data, self.packed_field_cls)
             yield self.output_topic_name, msg
