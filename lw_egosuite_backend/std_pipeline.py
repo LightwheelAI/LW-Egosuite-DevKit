@@ -13,7 +13,6 @@ from lw_egosuite_backend.converters.std_mcap import (
     StdAnnotationPerFrameReader,
     StdLowQualityReader,
     StdPerFramePointCloudReader,
-    StdPointCloudReader,
 )
 from lw_egosuite_backend.converters.pose.std_mcap import (
     StdPoseDataReader,
@@ -176,13 +175,7 @@ class StdPipeline(BasePipeline):
             )
         )
 
-        # 3) Point cloud: static scene + per-frame (per frame: with data or empty)
-        self._add_reader(
-            StdPointCloudReader(
-                file_path=self.mcap,
-                raw_topic="pointcloud/static",
-            )
-        )
+        # 3) Point cloud: per-frame (with data or empty)
         self._add_reader(
             StdPerFramePointCloudReader(
                 file_path=self.mcap,
