@@ -24,7 +24,7 @@ def _fill_pointcloud_header(msg: Any, secs: int, nsecs: int) -> None:
 def _fill_pointcloud_from_pc_data(msg: Any, pcd_data: Any, packed_field_cls: type) -> None:
     """
     Fill msg.fields, msg.point_stride, msg.data from pcd_data.pc_data (structured array).
-    If pcd_data is None or empty, set point_stride=0 and data=b\"\".
+    If pcd_data is None or empty, set point_stride=0 and data=b"".
     """
     if pcd_data is None:
         msg.point_stride = 0
@@ -78,36 +78,6 @@ def _fill_pointcloud_from_pc_data(msg: Any, pcd_data: Any, packed_field_cls: typ
     msg.data = bytes(packed_data)
 
 
-@register("pointcloud/static")
-class StdPCDStaticGenerator(Generator):
-    """Generator to convert MCAP static point cloud data into foxglove.PointCloud messages."""
-
-    @property
-    def outputs(self) -> Dict[str, str]:
-        return {self.output_topic_name: "foxglove.PointCloud"}
-
-    def setup(self, **kwargs):
-        self.output_topic_name = "/pointcloud/static"
-        self.pointcloud_cls = self.get_message_type("foxglove.PointCloud")
-        self.packed_field_cls = self.get_message_type("foxglove.PackedElementField")
-
-    def generate(self, data, timestamp):
-        if not isinstance(data, dict):
-            return
-        if not data.get("static_scene", False):
-            return
-        pcd_data = data.get("pcd_data")
-        if pcd_data is None:
-            return
-        try:
-            msg = self.pointcloud_cls()
-            _fill_pointcloud_header(msg, *self.ns2sec_nsec(timestamp))
-            _fill_pointcloud_from_pc_data(msg, pcd_data, self.packed_field_cls)
-            yield self.output_topic_name, msg
-        except Exception as e:
-            logger.error("Error converting static point cloud data: %s", e)
-
-
 @register("pointcloud/2d_projection")
 class StdPCDPerFrameGenerator(Generator):
     """
@@ -127,11 +97,7 @@ class StdPCDPerFrameGenerator(Generator):
     def generate(self, data, timestamp):
         if not isinstance(data, dict):
             return
-        if data.get("static_scene", True):
-            return
         pcd_data = data.get("pcd_data")
-        if pcd_data is None:
-            return
         msg = self.pointcloud_cls()
         _fill_pointcloud_header(msg, *self.ns2sec_nsec(timestamp))
         try:
