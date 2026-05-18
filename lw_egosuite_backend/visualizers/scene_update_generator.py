@@ -1,26 +1,39 @@
 from . import Generator, register
 from typing import Dict
-import math
-from scipy.spatial.transform import Rotation as R
-import numpy as np
 
 # --- Topology Definition (Index Pairs) ---
-# Lower-body skeleton: left leg and right leg
-LOWER_BODY_BONES = [
-    (0, 1), (1, 4), (4, 7), (7, 10),  # Left leg
-    (0, 2), (2, 5), (5, 8), (8, 11),  # Right Leg
+# Full 22-joint body (indices refer to raw body points before appending head/cam):
+#   0=pelvis, 1=left_hip, 2=right_hip, 3=spine1, 4=left_knee, 5=right_knee,
+#   6=spine2, 7=left_ankle, 8=right_ankle, 9=spine3, 10=left_foot, 11=right_foot,
+#   12=neck, 13=left_collar, 14=right_collar, 15=head, 16=left_shoulder,
+#   17=right_shoulder, 18=left_elbow, 19=right_elbow, 20=left_wrist, 21=right_wrist
+# After appending: 22=headcam_pose, 23=right_eye_cam_pose
+BODY_BONES_22 = [
+    (0, 1), (1, 4), (4, 7), (7, 10),              # Left leg
+    (0, 2), (2, 5), (5, 8), (8, 11),              # Right leg
+    (0, 3), (3, 6), (6, 9), (9, 12), (12, 15),    # Spine
+    (9, 13), (13, 16), (16, 18), (18, 20),         # Left arm
+    (9, 14), (14, 17), (17, 19), (19, 21),         # Right arm
+    (15, 22), (15, 23),                             # head->cam
 ]
 
-# Upper-body skeleton: spine and arms; wrist of cam body is drawn separately
-UPPER_BODY_BONES = [
-    (0, 3), (3, 6), (6, 9), (9, 12), (12, 15),  # Spine
-    (9, 13), (13, 16), (16, 18), (18, 20),  # Left Arm
-    (9, 14), (14, 17), (17, 19), (19, 21),  # Right Arm
-    (15, 22), (15, 23)  # head->cam
+# 14-joint upper-body only (lower limbs 1,2,4,5,7,8,10,11 removed):
+#   0=pelvis, 1=spine1, 2=spine2, 3=spine3, 4=neck, 5=left_collar,
+#   6=right_collar, 7=head, 8=left_shoulder, 9=right_shoulder,
+#   10=left_elbow, 11=right_elbow, 12=left_wrist, 13=right_wrist
+# After appending: 14=headcam_pose, 15=right_eye_cam_pose
+BODY_BONES_14 = [
+    (0, 1), (1, 2), (2, 3), (3, 4), (4, 7),      # Spine
+    (3, 5), (5, 8), (8, 10), (10, 12),            # Left arm
+    (3, 6), (6, 9), (9, 11), (11, 13),            # Right arm
+    (7, 14), (7, 15),                               # head->cam
 ]
 
-# Keep the original BODY_BONES for compatibility (if needed)
-BODY_BONES = LOWER_BODY_BONES + UPPER_BODY_BONES
+
+def _get_body_bones(num_body_joints: int):
+    if num_body_joints <= 14:
+        return BODY_BONES_14
+    return BODY_BONES_22
 
 HAND_BONES = [
     (0, 1), (1, 2), (2, 3), (3, 4),       # Thumb
@@ -37,8 +50,6 @@ COLOR_R_HAND = {"r": 1.0, "g": 0.4, "b": 0.7, "a": 1.0}
 COLOR_JOINT = {"r": 0.6, "g": 0.4, "b": 0.2, "a": 1.0}
 COLOR_HAND_POINTS = {"r": 1.0, "g": 1.0, "b": 0, "a": 1.0}
 
-# Whether to output only one complete body (True, default) or keep upper and lower body separated (False)
-ONLY_FULL_BODY = True
 
 
 @register("scene-update")
@@ -47,23 +58,13 @@ class SceneUpdateGenerator(Generator):
     @property
     def outputs(self) -> Dict[str, str]:
         prefix = f"/{self._stem}" if getattr(self, "_stem", None) else ""
-        if ONLY_FULL_BODY:
-            # Output only one full body + left and right hands
-            return dict(
-                {f"{prefix}/body_keypoints": "foxglove.SceneUpdate"},
-                **{f"{prefix}/right_hand_keypoints": "foxglove.SceneUpdate"},
-                **{f"{prefix}/left_hand_keypoints": "foxglove.SceneUpdate"},
-                **{f"{prefix}/right_hand_keypoints_2d": "foxglove.SceneUpdate"},
-                **{f"{prefix}/left_hand_keypoints_2d": "foxglove.SceneUpdate"},
-            )
-        else:
-            # Upper and lower body separation + left and right hands
-            return dict(
-                {f"{prefix}/upper_body_keypoints": "foxglove.SceneUpdate"},
-                **{f"{prefix}/lower_body_keypoints": "foxglove.SceneUpdate"},
-                **{f"{prefix}/right_hand_keypoints": "foxglove.SceneUpdate"},
-                **{f"{prefix}/left_hand_keypoints": "foxglove.SceneUpdate"},
-            )
+        return {
+            f"{prefix}/body_keypoints": "foxglove.SceneUpdate",
+            f"{prefix}/right_hand_keypoints": "foxglove.SceneUpdate",
+            f"{prefix}/left_hand_keypoints": "foxglove.SceneUpdate",
+            f"{prefix}/right_hand_keypoints_2d": "foxglove.SceneUpdate",
+            f"{prefix}/left_hand_keypoints_2d": "foxglove.SceneUpdate",
+        }
 
     def setup(self, **kwargs):
         parts = self.src_topic.split("/")
@@ -73,17 +74,11 @@ class SceneUpdateGenerator(Generator):
         # Even though the Primitive class is not explicitly required here, ensure the foxglove library is properly loaded.
 
     def generate(self, data, timestamp):
-        # --- Core fix: Prepare coordinate transformation matrix ---
-        # 1. Get the pelvis world pose
-        # p_pose = data["pelvis_pose"]
-        # pelvis_pos = np.array([p_pose["position"]["x"], p_pose["position"]["y"], p_pose["position"]["z"]])
-
-        # 2. Construct rotation object (note: scipy order is x, y, z, w)
-        world_body_pts = [p for p in data["joints"]["body"]]
+        raw_body_pts = data["joints"]["body"]
+        body_bones = _get_body_bones(len(raw_body_pts))
+        world_body_pts = list(raw_body_pts)
         world_body_pts.append(data["headcam_pose"])
         world_body_pts.append(data["right_eye_cam_pose"])
-        world_body_pts.append((data["headcam_pose"]))
-        world_body_pts.append((data["right_eye_cam_pose"]))
 
         world_l_hand_pts = [p for p in data["joints"]["left_hand"]]
         world_r_hand_pts = [p for p in data["joints"]["right_hand"]]
@@ -141,53 +136,19 @@ class SceneUpdateGenerator(Generator):
                 p_end.y = points[end_idx]["y"]
                 p_end.z = points[end_idx]["z"]
         if len(world_body_pts) > 0:
-            if ONLY_FULL_BODY:
-                # 1. Full body: Use the BODY_BONES connectivity.
-                used_indices = sorted(
-                    {idx for pair in BODY_BONES for idx in pair if idx <
-                        len(world_body_pts)}
-                )
-                body_pts = [world_body_pts[i] for i in used_indices]
+            used_indices = sorted(
+                {idx for pair in body_bones for idx in pair if idx <
+                    len(world_body_pts)}
+            )
+            body_pts = [world_body_pts[i] for i in used_indices]
 
-                update_msg_body, entity_body = create_base_entity(
-                    "full_body_skeleton")
-                add_spheres(entity_body, body_pts, 0.022, COLOR_JOINT)
-                add_lines(entity_body, world_body_pts,
-                          BODY_BONES, 0.01, COLOR_BODY)
+            update_msg_body, entity_body = create_base_entity(
+                "full_body_skeleton")
+            add_spheres(entity_body, body_pts, 0.022, COLOR_JOINT)
+            add_lines(entity_body, world_body_pts,
+                      body_bones, 0.01, COLOR_BODY)
 
-                yield f"/{self._stem}/body_keypoints" if self._stem else "/body_keypoints", update_msg_body
-
-            else:
-                # 1. Generate lower body keypoints topic (/lower_body_keypoints)
-                # Includes: keypoints of the left and right legs (indices 0–11) and bones
-                # Lower-body keypoint indices
-                lower_body_indices = [0, 1, 2, 4, 5, 7, 8, 10, 11]
-                lower_body_pts = [world_body_pts[i]
-                                  for i in lower_body_indices if i < len(world_body_pts)]
-
-                update_msg_lower, entity_lower = create_base_entity(
-                    "lower_body_skeleton")
-                add_spheres(entity_lower, lower_body_pts, 0.008, COLOR_JOINT)
-                add_lines(entity_lower, world_body_pts,
-                          LOWER_BODY_BONES, 0.0035, COLOR_BODY)
-                yield f"/{self._stem}/lower_body_keypoints" if self._stem else "/lower_body_keypoints", update_msg_lower
-
-                # 2. Generate upper body keypoints topic (/upper_body_keypoints)
-                # Includes: key points of the spine and arms (indices 0, 3, 6, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23) and bones
-                # Note: Index 0 (pelvis) is also included because the spine starts from the pelvis.
-                # Upper body keypoint indices
-                upper_body_indices = [0, 3, 6, 9, 12, 13,
-                                      14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
-                upper_body_pts = [world_body_pts[i]
-                                  for i in upper_body_indices if i < len(world_body_pts)]
-
-                update_msg_upper, entity_upper = create_base_entity(
-                    "upper_body_skeleton")
-                add_spheres(entity_upper, upper_body_pts, 0.022, COLOR_JOINT)
-                add_lines(entity_upper, world_body_pts,
-                          UPPER_BODY_BONES, 0.01, COLOR_BODY)
-
-                yield f"/{self._stem}/upper_body_keypoints" if self._stem else "/upper_body_keypoints", update_msg_upper
+            yield f"/{self._stem}/body_keypoints" if self._stem else "/body_keypoints", update_msg_body
 
         # 3. Generate right-hand keypoints topic (/right_hand_keypoints)
         if len(world_r_hand_pts) > 0:
