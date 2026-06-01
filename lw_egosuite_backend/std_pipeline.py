@@ -47,6 +47,9 @@ class StdPipeline(BasePipeline):
 
     metadata_mcap: Optional[Dict[str, Any]] = None
 
+    include_2d_projection: bool = False
+    """If True, include the /pointcloud/2d_projection topic in the output."""
+
     def __post_init__(self):
         self.mcap = Path(self.mcap).resolve()
         if self.mcap.is_dir():
@@ -176,12 +179,13 @@ class StdPipeline(BasePipeline):
         )
 
         # 3) Point cloud: per-frame (with data or empty)
-        self._add_reader(
-            StdPerFramePointCloudReader(
-                file_path=self.mcap,
-                raw_topic="pointcloud/2d_projection",
+        if self.include_2d_projection:
+            self._add_reader(
+                StdPerFramePointCloudReader(
+                    file_path=self.mcap,
+                    raw_topic="pointcloud/2d_projection",
+                )
             )
-        )
 
     def set_writer(self):
         # BasePipeline expects writer.topic2pb2 to be populated.
