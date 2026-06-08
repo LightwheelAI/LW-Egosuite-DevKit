@@ -8,13 +8,16 @@ from typing import Dict
 #   12=neck, 13=left_collar, 14=right_collar, 15=head, 16=left_shoulder,
 #   17=right_shoulder, 18=left_elbow, 19=right_elbow, 20=left_wrist, 21=right_wrist
 # After appending: 22=headcam_pose, 23=right_eye_cam_pose
-BODY_BONES_22 = [
-    (0, 1), (1, 4), (4, 7), (7, 10),              # Left leg
-    (0, 2), (2, 5), (5, 8), (8, 11),              # Right leg
+UPPER_BODY_BONES_22 = [
     (0, 3), (3, 6), (6, 9), (9, 12), (12, 15),    # Spine
     (9, 13), (13, 16), (16, 18), (18, 20),         # Left arm
     (9, 14), (14, 17), (17, 19), (19, 21),         # Right arm
     (15, 22), (15, 23),                             # head->cam
+]
+
+LOWER_BODY_BONES_22 = [
+    (0, 1), (1, 4), (4, 7), (7, 10),              # Left leg
+    (0, 2), (2, 5), (5, 8), (8, 11),              # Right leg
 ]
 
 # 14-joint upper-body only (lower limbs 1,2,4,5,7,8,10,11 removed):
@@ -22,18 +25,12 @@ BODY_BONES_22 = [
 #   6=right_collar, 7=head, 8=left_shoulder, 9=right_shoulder,
 #   10=left_elbow, 11=right_elbow, 12=left_wrist, 13=right_wrist
 # After appending: 14=headcam_pose, 15=right_eye_cam_pose
-BODY_BONES_14 = [
+UPPER_BODY_BONES_14 = [
     (0, 1), (1, 2), (2, 3), (3, 4), (4, 7),      # Spine
     (3, 5), (5, 8), (8, 10), (10, 12),            # Left arm
     (3, 6), (6, 9), (9, 11), (11, 13),            # Right arm
     (7, 14), (7, 15),                               # head->cam
 ]
-
-
-def _get_body_bones(num_body_joints: int):
-    if num_body_joints <= 14:
-        return BODY_BONES_14
-    return BODY_BONES_22
 
 HAND_BONES = [
     (0, 1), (1, 2), (2, 3), (3, 4),       # Thumb
@@ -51,7 +48,6 @@ COLOR_JOINT = {"r": 0.6, "g": 0.4, "b": 0.2, "a": 1.0}
 COLOR_HAND_POINTS = {"r": 1.0, "g": 1.0, "b": 0, "a": 1.0}
 
 
-
 @register("scene-update")
 @register("*/scene_update")
 class SceneUpdateGenerator(Generator):
@@ -59,7 +55,8 @@ class SceneUpdateGenerator(Generator):
     def outputs(self) -> Dict[str, str]:
         prefix = f"/{self._stem}" if getattr(self, "_stem", None) else ""
         return {
-            f"{prefix}/body_keypoints": "foxglove.SceneUpdate",
+            f"{prefix}/upper_body_keypoints": "foxglove.SceneUpdate",
+            f"{prefix}/lower_body_keypoints": "foxglove.SceneUpdate",
             f"{prefix}/right_hand_keypoints": "foxglove.SceneUpdate",
             f"{prefix}/left_hand_keypoints": "foxglove.SceneUpdate",
             f"{prefix}/right_hand_keypoints_2d": "foxglove.SceneUpdate",
@@ -75,7 +72,6 @@ class SceneUpdateGenerator(Generator):
 
     def generate(self, data, timestamp):
         raw_body_pts = data["joints"]["body"]
-        body_bones = _get_body_bones(len(raw_body_pts))
         world_body_pts = list(raw_body_pts)
         world_body_pts.append(data["headcam_pose"])
         world_body_pts.append(data["right_eye_cam_pose"])
@@ -136,19 +132,37 @@ class SceneUpdateGenerator(Generator):
                 p_end.y = points[end_idx]["y"]
                 p_end.z = points[end_idx]["z"]
         if len(world_body_pts) > 0:
-            used_indices = sorted(
-                {idx for pair in body_bones for idx in pair if idx <
+            is_22 = len(raw_body_pts) > 14
+            upper_bones = UPPER_BODY_BONES_22 if is_22 else UPPER_BODY_BONES_14
+            lower_bones = LOWER_BODY_BONES_22
+
+            upper_topic = f"/{self._stem}/upper_body_keypoints" if self._stem else "/upper_body_keypoints"
+            lower_topic = f"/{self._stem}/lower_body_keypoints" if self._stem else "/lower_body_keypoints"
+
+            upper_indices = sorted(
+                {idx for pair in upper_bones for idx in pair if idx <
                     len(world_body_pts)}
             )
-            body_pts = [world_body_pts[i] for i in used_indices]
+            update_msg_upper, entity_upper = create_base_entity(
+                "upper_body_skeleton")
+            add_spheres(entity_upper, [world_body_pts[i]
+                        for i in upper_indices], 0.022, COLOR_JOINT)
+            add_lines(entity_upper, world_body_pts,
+                      upper_bones, 0.01, COLOR_BODY)
+            yield upper_topic, update_msg_upper
 
-            update_msg_body, entity_body = create_base_entity(
-                "full_body_skeleton")
-            add_spheres(entity_body, body_pts, 0.022, COLOR_JOINT)
-            add_lines(entity_body, world_body_pts,
-                      body_bones, 0.01, COLOR_BODY)
-
-            yield f"/{self._stem}/body_keypoints" if self._stem else "/body_keypoints", update_msg_body
+            if is_22:
+                lower_indices = sorted(
+                    {idx for pair in lower_bones for idx in pair if idx <
+                        len(world_body_pts)}
+                )
+                update_msg_lower, entity_lower = create_base_entity(
+                    "lower_body_skeleton")
+                add_spheres(entity_lower, [world_body_pts[i]
+                            for i in lower_indices], 0.022, COLOR_JOINT)
+                add_lines(entity_lower, world_body_pts,
+                          lower_bones, 0.01, COLOR_BODY)
+                yield lower_topic, update_msg_lower
 
         # 3. Generate right-hand keypoints topic (/right_hand_keypoints)
         if len(world_r_hand_pts) > 0:

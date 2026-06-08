@@ -3,13 +3,13 @@
     "3D!3kp7qj7": {
       "cameraState": {
         "perspective": true,
-        "distance": 72.10076346673938,
-        "phi": 75.13474461120099,
-        "thetaOffset": 69.427034863607,
+        "distance": 65.07093902937946,
+        "phi": 61.54983895082856,
+        "thetaOffset": 10.082446978802995,
         "targetOffset": [
-          -1.8567112525413445,
-          -1.0817756746533964,
-          0.10100000000000076
+          -0.33847633810025146,
+          -1.5368872801629743,
+          -6.676505759004992e-17
         ],
         "target": [
           0,
@@ -54,9 +54,6 @@
         "/pose/left_hand_keyponts": {
           "visible": true
         },
-        "/pose/body_keypoints": {
-          "visible": true
-        },
         "/head_left_camera_params/head_left_camera_undistorted/camera_info": {
           "visible": true,
           "planarProjectionFactor": 1,
@@ -83,9 +80,6 @@
         "/pose_trim/right_hand_keyponts": {
           "visible": true
         },
-        "/pose_trim/body_keypoints": {
-          "visible": true
-        },
         "/pcd/pointcloud": {
           "visible": false,
           "colorField": "z",
@@ -106,15 +100,24 @@
         "/scene-update/left_hand_keypoints": {
           "visible": true
         },
-        "/scene-update/body_keypoints": {
-          "visible": true
-        },
         "/sensor/camera/head_left/intrinsic": {
           "visible": true,
           "distance": 0.139,
           "planarProjectionFactor": 1
         },
         "/scene-update/head_pose_trajectory": {
+          "visible": true
+        },
+        "/pointcloud": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "rgba-fields",
+          "colorMap": "turbo"
+        },
+        "/scene-update/lower_body_keypoints": {
+          "visible": true
+        },
+        "/scene-update/upper_body_keypoints": {
           "visible": true
         }
       },
@@ -150,7 +153,8 @@
         "poseEstimateYDeviation": 0.5,
         "poseEstimateThetaDeviation": 0.26179939
       },
-      "imageMode": {}
+      "imageMode": {},
+      "synchronize": false
     },
     "Image!1ifziqg": {
       "cameraState": {
@@ -200,8 +204,11 @@
         "/scene-update/right_hand_keypoints_2d": {
           "visible": true
         },
-        "/scene-update/body_keypoints": {
-          "visible": true
+        "/scene-update/lower_body_keypoints": {
+          "visible": false
+        },
+        "/scene-update/upper_body_keypoints": {
+          "visible": false
         }
       },
       "layers": {},
@@ -228,7 +235,8 @@
           }
         },
         "calibrationTopic": "/sensor/camera/head_left/intrinsic"
-      }
+      },
+      "synchronize": false
     },
     "Image!1t9jwpi": {
       "cameraState": {
@@ -272,8 +280,8 @@
         "/scene-update/left_hand_keypoints_2d": {
           "visible": true
         },
-        "/scene-update/body_keypoints": {
-          "visible": true
+        "/scene-update/upper_body_keypoints": {
+          "visible": false
         }
       },
       "layers": {},
@@ -298,18 +306,19 @@
             "visible": true
           }
         }
-      }
+      },
+      "synchronize": false
     },
     "3D!2zdkiek": {
       "cameraState": {
         "perspective": true,
-        "distance": 0.3476920923159267,
-        "phi": 41.05247388046683,
-        "thetaOffset": 84.68922300202095,
+        "distance": 1.3194139635568236,
+        "phi": 36.35973645029991,
+        "thetaOffset": 40.443412946155476,
         "targetOffset": [
-          -0.15042201982077186,
-          -0.49837748982169217,
-          2.2392404510850663e-18
+          0.11744227512866866,
+          -0.7647094002008631,
+          3.2079914216245063e-18
         ],
         "target": [
           0,
@@ -374,7 +383,8 @@
         "poseEstimateYDeviation": 0.5,
         "poseEstimateThetaDeviation": 0.26179939
       },
-      "imageMode": {}
+      "imageMode": {},
+      "synchronize": false
     },
     "StateTransitions!3lixso3": {
       "paths": [
