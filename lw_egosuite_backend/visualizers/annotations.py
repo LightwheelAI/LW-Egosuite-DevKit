@@ -123,6 +123,7 @@ class AnnotationsGenerator(Generator):
 
         has_desc = False
         has_caption = False
+        has_skill = False
         # Process annotation data
         if isinstance(data, dict):
             description = data.get("description", {})
@@ -146,28 +147,30 @@ class AnnotationsGenerator(Generator):
                 skill_part = (annotation_dict.get("skill") or "").strip()
                 caption_part = (annotation_dict.get("caption") or "").strip()
                 desc_line = desc_part
-                if skill_part:
-                    desc_line += ("\n" if desc_line else "") + \
-                        "skill: " + skill_part
             else:
                 desc_line = str(description).strip() if description else ""
+                skill_part = ""
                 caption_part = ""
 
-            # caption: first line at CAPTION_Y; description starts below caption (or at CAPTION_Y if no caption).
             has_desc = bool(desc_line and has_annotation)
             has_caption = bool(caption_part)
-            CAPTION_Y = 80
+            has_skill = bool(skill_part and has_annotation)
+            MARGIN_X = 40
+            CAPTION_Y = 70
             CAPTION_FONT_SIZE = 36
             CAPTION_LINE_SPACING = 1.0
-            DESC_FONT_SIZE = 46  # description font size
-            DESC_GAP = 20  # gap between last caption line and first description line
+            DESC_FONT_SIZE = 46
+            DESC_GAP = 20
+            SKILL_FONT_SIZE = 42
+            IMAGE_HEIGHT = 1456
+            SKILL_Y = IMAGE_HEIGHT - (CAPTION_Y - CAPTION_FONT_SIZE)
             if has_caption:
                 wrapped_cap = _wrap_text(caption_part, max_chars_per_line=80)
                 _add_wrapped_text(
                     image_annotations_msg,
                     sec=sec,
                     nanos=nanos,
-                    x=50,
+                    x=MARGIN_X,
                     base_y=CAPTION_Y,
                     text=wrapped_cap,
                     font_size=CAPTION_FONT_SIZE,
@@ -181,13 +184,13 @@ class AnnotationsGenerator(Generator):
             else:
                 caption_bottom_y = CAPTION_Y
             if has_desc:
-                wrapped = _wrap_text(desc_line, max_chars_per_line=60)
+                wrapped = _wrap_text(desc_line, max_chars_per_line=62)
                 desc_base_y = caption_bottom_y + DESC_GAP if has_caption else CAPTION_Y
                 _add_wrapped_text(
                     image_annotations_msg,
                     sec=sec,
                     nanos=nanos,
-                    x=50,
+                    x=MARGIN_X,
                     base_y=desc_base_y,
                     text=wrapped,
                     font_size=DESC_FONT_SIZE,
@@ -195,7 +198,20 @@ class AnnotationsGenerator(Generator):
                     text_rgba=(1.0, 1.0, 1.0, 1.0),
                     bg_rgba=(40 / 255.0, 40 / 255.0, 40 / 255.0, 0.8),
                 )
+            if has_skill:
+                _add_wrapped_text(
+                    image_annotations_msg,
+                    sec=sec,
+                    nanos=nanos,
+                    x=MARGIN_X,
+                    base_y=SKILL_Y,
+                    text=f"skill: {skill_part}",
+                    font_size=SKILL_FONT_SIZE,
+                    line_spacing=1.0,
+                    text_rgba=(1.0, 1.0, 1.0, 1.0),
+                    bg_rgba=(40 / 255.0, 40 / 255.0, 40 / 255.0, 0.8),
+                )
 
         yield f"{prefix}/subtask_annotation", subtask_msg
-        if has_desc or has_caption:
+        if has_desc or has_caption or has_skill:
             yield f"{prefix}/annotation_image_annotations", image_annotations_msg

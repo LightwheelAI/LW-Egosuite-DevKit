@@ -31,7 +31,6 @@ class StdAnnotationPerFrameReader(BaseReader):
         self.raw_topic = "subtask-annotation"
 
     def match_processors(self):
-        # Reuse existing annotations visualizer.
         self.processors = get_visualization_generators(
             self.raw_topic, MessageTypes.PROTO
         )
@@ -60,40 +59,22 @@ class StdAnnotationPerFrameReader(BaseReader):
             if seg is None:
                 continue
 
-            description = str(getattr(seg, "description", "") or "")
+            task = str(getattr(seg, "task", "") or "")
+            subtask = str(getattr(seg, "subtask", "") or "")
             skill = str(getattr(seg, "skill", "") or "")
-            start_frame = getattr(seg, "start_frame", None)
-            end_frame = getattr(seg, "end_frame", None)
-
-            caption = str(getattr(seg, "caption", "") or "")
-            label = str(getattr(seg, "label", "") or "")
             start_time = getattr(seg, "start_time", None)
             end_time = getattr(seg, "end_time", None)
 
-            # tier1-only: caption set, no meaningful time range (0,0), no label → episode caption
-            st_sec = float(start_time) if start_time is not None else 0.0
-            et_sec = float(end_time) if end_time is not None else 0.0
-            has_frames = start_frame is not None and end_frame is not None
-            if caption and not label and st_sec == 0 and et_sec == 0:
-                episode_caption = caption
-                continue
-            # tier2: label + start_time/end_time (seconds)
-            if (start_time is not None and end_time is not None) and (label or st_sec != 0 or et_sec != 0):
+            if task and not episode_caption:
+                episode_caption = task
+
+            if start_time is not None and end_time is not None:
                 segments.append({
                     "by_time": True,
-                    "description": label,
-                    "start_time_sec": st_sec,
-                    "end_time_sec": et_sec,
-                })
-                continue
-            # annotations: description/skill + start_frame/end_frame
-            if has_frames:
-                segments.append({
-                    "by_time": False,
-                    "description": description,
+                    "description": subtask,
                     "skill": skill,
-                    "start_frame": int(start_frame),
-                    "end_frame": int(end_frame),
+                    "start_time_sec": float(start_time),
+                    "end_time_sec": float(end_time),
                 })
 
         def _segment_start_key(s):
