@@ -70,17 +70,17 @@ done
 
 * `$data_path`: The directory containing the source MCAP files. Each file will be converted and saved with a `_vis.mcap` suffix in the **same directory** as the source file.
 
-### 2. Visualization with Foxglove Studio
+### 2. Data Visualization
 
-Follow these steps to visualize the processed data in [Foxglove Studio](https://app.foxglove.dev/):
+Follow these steps to visualize the processed data in [LW-VIZ](https://foxviz.lightwheel.net/):
 
-1. **Launch Foxglove**: Open the Foxglove Studio desktop application or web version.
-2. **Import Layout**: Load the recommended configuration file: `assets/default_layout.json`.
+1. **Launch LW-VIZ**: Open the LW-VIZ visualization platform.
+2. **Import Layout**: Select default mode in the Layouts option. Load the recommended configuration file: `assets/default_layout.json`.
 3. **Load Data Streams**: Simultaneously load the source file `mcap_filename.mcap` and the generated visualization file `{mcap_filename}_vis.mcap` (in the same directory as the source by default).
 
-Once loaded, the visualization will appear in the Foxglove Studio dashboard as shown below:
+Once loaded, the visualization will appear in the dashboard as shown below:
 
-![image](assets/demo.jpg)
+![image](assets/demo.png)
 
 ### 3. Reading from MCAP
 

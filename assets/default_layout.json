@@ -1,15 +1,93 @@
 {
   "configById": {
+    "Image!1ifziqg": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 60,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 60,
+        "fovy": 45,
+        "near": 0.01,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {
+        "/pose/right_hand_keyponts_2d": {
+          "visible": true
+        },
+        "/pose/left_hand_keyponts_2d": {
+          "visible": true
+        },
+        "/pose_trim/left_hand_keyponts_2d": {
+          "visible": true
+        },
+        "/pose_trim/right_hand_keyponts_2d": {
+          "visible": true
+        },
+        "/scene-update/left_hand_keypoints_2d": {
+          "visible": true
+        },
+        "/scene-update/right_hand_keypoints_2d": {
+          "visible": true
+        },
+        "/scene-update/body_keypoints": {
+          "visible": true
+        }
+      },
+      "layers": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {
+        "imageTopic": "/sensor/camera/head_left/video",
+        "annotations": {
+          "/annotation/annotation_image_annotations": {
+            "visible": true
+          },
+          "/annotation_trim/annotation_image_annotations": {
+            "visible": true
+          },
+          "/subtask-annotation/annotation_image_annotations": {
+            "visible": true
+          }
+        },
+        "calibrationTopic": "/sensor/camera/head_left/intrinsic"
+      }
+    },
     "3D!3kp7qj7": {
       "cameraState": {
         "perspective": true,
-        "distance": 65.07093902937946,
-        "phi": 61.54983895082856,
-        "thetaOffset": 10.082446978802995,
+        "distance": 45.44146361555746,
+        "phi": 56.86031331519067,
+        "thetaOffset": 73.6452987971628,
         "targetOffset": [
-          -0.33847633810025146,
-          -1.5368872801629743,
-          -6.676505759004992e-17
+          0.3749281506563915,
+          -0.11767634971477363,
+          -0.4651344660669565
         ],
         "target": [
           0,
@@ -30,10 +108,212 @@
       "followTf": "world",
       "scene": {
         "transforms": {
+          "visible": false,
+          "showLabel": false,
+          "lineWidth": 0.5,
+          "axisScale": 0.309
+        }
+      },
+      "transforms": {
+        "frame:world": {
+          "visible": false
+        },
+        "frame:head_left_camera": {
+          "visible": false
+        },
+        "frame:head_right_camera": {
+          "visible": false
+        },
+        "frame:pelvis": {
+          "visible": false
+        },
+        "frame:left_hip": {
+          "visible": false
+        },
+        "frame:right_hip": {
+          "visible": false
+        },
+        "frame:spine1": {
+          "visible": false
+        },
+        "frame:left_knee": {
+          "visible": false
+        },
+        "frame:right_knee": {
+          "visible": false
+        },
+        "frame:spine2": {
+          "visible": false
+        },
+        "frame:left_ankle": {
+          "visible": false
+        },
+        "frame:right_ankle": {
+          "visible": false
+        },
+        "frame:spine3": {
+          "visible": false
+        },
+        "frame:left_foot": {
+          "visible": false
+        },
+        "frame:right_foot": {
+          "visible": false
+        },
+        "frame:neck": {
+          "visible": false
+        },
+        "frame:left_collar": {
+          "visible": false
+        },
+        "frame:right_collar": {
+          "visible": false
+        },
+        "frame:head": {
+          "visible": false
+        },
+        "frame:left_shoulder": {
+          "visible": false
+        },
+        "frame:right_shoulder": {
+          "visible": false
+        },
+        "frame:left_elbow": {
+          "visible": false
+        },
+        "frame:right_elbow": {
+          "visible": false
+        },
+        "frame:left_wrist": {
+          "visible": false
+        },
+        "frame:left_thumb_cmc": {
+          "visible": false
+        },
+        "frame:left_thumb_mcp": {
+          "visible": false
+        },
+        "frame:left_thumb_ip": {
+          "visible": false
+        },
+        "frame:left_thumb_tip": {
+          "visible": false
+        },
+        "frame:left_index_finger_mcp": {
+          "visible": false
+        },
+        "frame:left_index_finger_pip": {
+          "visible": false
+        },
+        "frame:left_index_finger_dip": {
+          "visible": false
+        },
+        "frame:left_index_finger_tip": {
+          "visible": false
+        },
+        "frame:left_middle_finger_mcp": {
+          "visible": false
+        },
+        "frame:left_middle_finger_pip": {
+          "visible": false
+        },
+        "frame:left_middle_finger_dip": {
+          "visible": false
+        },
+        "frame:left_middle_finger_tip": {
+          "visible": false
+        },
+        "frame:left_ring_finger_mcp": {
+          "visible": false
+        },
+        "frame:left_ring_finger_pip": {
+          "visible": false
+        },
+        "frame:left_ring_finger_dip": {
+          "visible": false
+        },
+        "frame:left_ring_finger_tip": {
+          "visible": false
+        },
+        "frame:left_pinky_mcp": {
+          "visible": false
+        },
+        "frame:left_pinky_pip": {
+          "visible": false
+        },
+        "frame:left_pinky_dip": {
+          "visible": false
+        },
+        "frame:left_pinky_tip": {
+          "visible": false
+        },
+        "frame:right_wrist": {
+          "visible": false
+        },
+        "frame:right_thumb_cmc": {
+          "visible": false
+        },
+        "frame:right_thumb_mcp": {
+          "visible": false
+        },
+        "frame:right_thumb_ip": {
+          "visible": false
+        },
+        "frame:right_thumb_tip": {
+          "visible": false
+        },
+        "frame:right_index_finger_mcp": {
+          "visible": false
+        },
+        "frame:right_index_finger_pip": {
+          "visible": false
+        },
+        "frame:right_index_finger_dip": {
+          "visible": false
+        },
+        "frame:right_index_finger_tip": {
+          "visible": false
+        },
+        "frame:right_middle_finger_mcp": {
+          "visible": false
+        },
+        "frame:right_middle_finger_pip": {
+          "visible": false
+        },
+        "frame:right_middle_finger_dip": {
+          "visible": false
+        },
+        "frame:right_middle_finger_tip": {
+          "visible": false
+        },
+        "frame:right_ring_finger_mcp": {
+          "visible": false
+        },
+        "frame:right_ring_finger_pip": {
+          "visible": false
+        },
+        "frame:right_ring_finger_dip": {
+          "visible": false
+        },
+        "frame:right_ring_finger_tip": {
+          "visible": false
+        },
+        "frame:right_pinky_mcp": {
+          "visible": false
+        },
+        "frame:right_pinky_pip": {
+          "visible": false
+        },
+        "frame:right_pinky_dip": {
+          "visible": false
+        },
+        "frame:right_pinky_tip": {
+          "visible": false
+        },
+        "frame:depth_camera": {
           "visible": false
         }
       },
-      "transforms": {},
       "topics": {
         "/pointcloud/pointcloud/static_scene": {
           "visible": true,
@@ -52,6 +332,9 @@
           "visible": true
         },
         "/pose/left_hand_keyponts": {
+          "visible": true
+        },
+        "/pose/body_keypoints": {
           "visible": true
         },
         "/head_left_camera_params/head_left_camera_undistorted/camera_info": {
@@ -80,6 +363,9 @@
         "/pose_trim/right_hand_keyponts": {
           "visible": true
         },
+        "/pose_trim/body_keypoints": {
+          "visible": true
+        },
         "/pcd/pointcloud": {
           "visible": false,
           "colorField": "z",
@@ -100,8 +386,11 @@
         "/scene-update/left_hand_keypoints": {
           "visible": true
         },
+        "/scene-update/body_keypoints": {
+          "visible": true
+        },
         "/sensor/camera/head_left/intrinsic": {
-          "visible": true,
+          "visible": false,
           "distance": 0.139,
           "planarProjectionFactor": 1
         },
@@ -112,13 +401,18 @@
           "visible": true,
           "colorField": "z",
           "colorMode": "rgba-fields",
-          "colorMap": "turbo"
+          "colorMap": "turbo",
+          "pointSize": 4.13,
+          "pointShape": "circle",
+          "stixelsEnabled": false
         },
-        "/scene-update/lower_body_keypoints": {
-          "visible": true
+        "/sensor/camera/head_left/video": {
+          "visible": false,
+          "cameraInfoTopic": "/sensor/camera/head_left/intrinsic",
+          "renderMode": "depth"
         },
-        "/scene-update/upper_body_keypoints": {
-          "visible": true
+        "/sensor/camera/depth/intrinsic": {
+          "visible": false
         }
       },
       "layers": {
@@ -153,253 +447,13 @@
         "poseEstimateYDeviation": 0.5,
         "poseEstimateThetaDeviation": 0.26179939
       },
-      "imageMode": {},
-      "synchronize": false
+      "imageMode": {}
     },
-    "Image!1ifziqg": {
-      "cameraState": {
-        "distance": 20,
-        "perspective": true,
-        "phi": 60,
-        "target": [
-          0,
-          0,
-          0
-        ],
-        "targetOffset": [
-          0,
-          0,
-          0
-        ],
-        "targetOrientation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "thetaOffset": 60,
-        "fovy": 45,
-        "near": 0.5,
-        "far": 5000
-      },
-      "followMode": "follow-pose",
-      "scene": {},
-      "transforms": {},
-      "topics": {
-        "/pose/right_hand_keyponts_2d": {
-          "visible": true
-        },
-        "/pose/left_hand_keyponts_2d": {
-          "visible": true
-        },
-        "/pose_trim/left_hand_keyponts_2d": {
-          "visible": true
-        },
-        "/pose_trim/right_hand_keyponts_2d": {
-          "visible": true
-        },
-        "/scene-update/left_hand_keypoints_2d": {
-          "visible": true
-        },
-        "/scene-update/right_hand_keypoints_2d": {
-          "visible": true
-        },
-        "/scene-update/lower_body_keypoints": {
-          "visible": false
-        },
-        "/scene-update/upper_body_keypoints": {
-          "visible": false
-        }
-      },
-      "layers": {},
-      "publish": {
-        "type": "point",
-        "poseTopic": "/move_base_simple/goal",
-        "pointTopic": "/clicked_point",
-        "poseEstimateTopic": "/initialpose",
-        "poseEstimateXDeviation": 0.5,
-        "poseEstimateYDeviation": 0.5,
-        "poseEstimateThetaDeviation": 0.26179939
-      },
-      "imageMode": {
-        "imageTopic": "/sensor/camera/head_left/video",
-        "annotations": {
-          "/annotation/annotation_image_annotations": {
-            "visible": true
-          },
-          "/annotation_trim/annotation_image_annotations": {
-            "visible": true
-          },
-          "/subtask-annotation/annotation_image_annotations": {
-            "visible": true
-          }
-        },
-        "calibrationTopic": "/sensor/camera/head_left/intrinsic"
-      },
-      "synchronize": false
-    },
-    "Image!1t9jwpi": {
-      "cameraState": {
-        "distance": 20,
-        "perspective": true,
-        "phi": 60,
-        "target": [
-          0,
-          0,
-          0
-        ],
-        "targetOffset": [
-          0,
-          0,
-          0
-        ],
-        "targetOrientation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "thetaOffset": 60,
-        "fovy": 45,
-        "near": 0.5,
-        "far": 5000
-      },
-      "followMode": "follow-pose",
-      "scene": {},
-      "transforms": {},
-      "topics": {
-        "/pose_trim/left_hand_keyponts_2d": {
-          "visible": true
-        },
-        "/pose_trim/right_hand_keyponts_2d": {
-          "visible": true
-        },
-        "/scene-update/right_hand_keypoints_2d": {
-          "visible": true
-        },
-        "/scene-update/left_hand_keypoints_2d": {
-          "visible": true
-        },
-        "/scene-update/upper_body_keypoints": {
-          "visible": false
-        }
-      },
-      "layers": {},
-      "publish": {
-        "type": "point",
-        "poseTopic": "/move_base_simple/goal",
-        "pointTopic": "/clicked_point",
-        "poseEstimateTopic": "/initialpose",
-        "poseEstimateXDeviation": 0.5,
-        "poseEstimateYDeviation": 0.5,
-        "poseEstimateThetaDeviation": 0.26179939
-      },
-      "imageMode": {
-        "imageTopic": "/sensor/camera/head_right/video",
-        "rotation": 0,
-        "calibrationTopic": "/sensor/camera/head_right/intrinsic",
-        "annotations": {
-          "/annotation_trim/annotation_image_annotations": {
-            "visible": true
-          },
-          "/subtask-annotation/annotation_image_annotations": {
-            "visible": true
-          }
-        }
-      },
-      "synchronize": false
-    },
-    "3D!2zdkiek": {
-      "cameraState": {
-        "perspective": true,
-        "distance": 1.3194139635568236,
-        "phi": 36.35973645029991,
-        "thetaOffset": 40.443412946155476,
-        "targetOffset": [
-          0.11744227512866866,
-          -0.7647094002008631,
-          3.2079914216245063e-18
-        ],
-        "target": [
-          0,
-          0,
-          0
-        ],
-        "targetOrientation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "fovy": 45,
-        "near": 0.5,
-        "far": 5000
-      },
-      "followMode": "follow-none",
-      "followTf": "head_left_camera",
-      "scene": {
-        "transforms": {
-          "visible": false
-        }
-      },
-      "transforms": {},
-      "topics": {
-        "/pointcloud": {
-          "visible": true,
-          "colorField": "z",
-          "colorMode": "rgba-fields",
-          "colorMap": "turbo"
-        }
-      },
-      "layers": {
-        "grid": {
-          "visible": false,
-          "drawBehind": false,
-          "label": "Grid",
-          "instanceId": "35c0d553-f9b1-463b-bd31-c122c20722d5",
-          "layerId": "foxglove.Grid",
-          "size": 10,
-          "divisions": 10,
-          "lineWidth": 1,
-          "color": "#248eff",
-          "position": [
-            0,
-            0,
-            0
-          ],
-          "rotation": [
-            0,
-            0,
-            0
-          ]
-        }
-      },
-      "publish": {
-        "type": "point",
-        "poseTopic": "/move_base_simple/goal",
-        "pointTopic": "/clicked_point",
-        "poseEstimateTopic": "/initialpose",
-        "poseEstimateXDeviation": 0.5,
-        "poseEstimateYDeviation": 0.5,
-        "poseEstimateThetaDeviation": 0.26179939
-      },
-      "imageMode": {},
-      "synchronize": false
-    },
-    "StateTransitions!3lixso3": {
+    "StateTransitions!w6zkp7": {
       "paths": [
         {
           "value": "/subtask-annotation/subtask_annotation.data",
-          "timestampMethod": "receiveTime",
-          "customStates": {
-            "type": "discrete",
-            "states": [
-              {
-                "value": "",
-                "color": "#0278b3"
-              }
-            ]
-          }
+          "timestampMethod": "receiveTime"
         }
       ],
       "isSynced": true
@@ -415,23 +469,12 @@
   },
   "layout": {
     "first": {
-      "first": "3D!3kp7qj7",
-      "second": {
-        "first": {
-          "first": "Image!1ifziqg",
-          "second": "Image!1t9jwpi",
-          "direction": "row",
-          "splitPercentage": 50.036979989633956
-        },
-        "second": "3D!2zdkiek",
-        "direction": "column",
-        "splitPercentage": 45.24390243902439
-      },
-      "direction": "row",
-      "splitPercentage": 47.62090370259388
+      "first": "Image!1ifziqg",
+      "second": "3D!3kp7qj7",
+      "direction": "row"
     },
-    "second": "StateTransitions!3lixso3",
+    "second": "StateTransitions!w6zkp7",
     "direction": "column",
-    "splitPercentage": 86.6338356356983
+    "splitPercentage": 78.16353633086702
   }
 }
