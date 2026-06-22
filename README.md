@@ -86,7 +86,10 @@ Once loaded, the visualization will appear in the dashboard as shown below:
 
 #### 3.1 Source Topics (Raw MCAP)
 
-The following topics are expected in the raw input MCAP file. For detailed joint index conventions, refer to the [Hand Pose](https://docs.lightwheel.net/mcap_data/pose/hand#joint-index-and-conventions) and [Body Pose](https://docs.lightwheel.net/mcap_data/pose/body#joint-index-and-conventions) documentation.
+The following topics are expected in the raw input MCAP file. For detailed joint index conventions, refer to the [Hand Pose](https://docs.lightwheel.net/mcap_data/pose/hand#joint-index-and-conventions) and [Body Pose](https://docs.lightwheel.net/mcap_data/pose/body#joint-index-and-conventions) documentation. For further details on message formats and schemas, see the [MCAP Data documentation](https://docs.lightwheel.net/mcap_data).
+
+<details>
+<summary>Click to expand topic list of raw MCAP</summary>
 
 | Topic | Proto Message | Description |
 |-------|--------------|-------------|
@@ -115,6 +118,8 @@ The following topics are expected in the raw input MCAP file. For detailed joint
 | `/sensor/camera/head_depth/extrinsic` | `foxglove.FrameTransforms`                    | Head depth camera extrinsic *(optional)* |
 | `/pointcloud`                         | `foxglove.PointCloud`                         | 3D point cloud (x, y, z + RGBA) *(optional)* |
 | `/audio`                              | `foxglove.RawAudio`                           | Raw audio stream (PCM s16) *(optional)* |
+
+</details>
 
 #### 3.2 Output Topics (Visualization MCAP)
 
