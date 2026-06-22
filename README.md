@@ -1,6 +1,6 @@
-#  LW-Egosuite-DevKit
+# LW-Egosuite-DevKit
 
-## Backend Installation
+## Installation
 
 ### Prerequisites
 
@@ -82,9 +82,60 @@ Once loaded, the visualization will appear in the dashboard as shown below:
 
 ![image](assets/demo.png)
 
-### 3. Reading from MCAP
+### 3. Topics
 
-#### 3.1 Export Video (CLI)
+#### 3.1 Source Topics (Raw MCAP)
+
+The following topics are expected in the raw input MCAP file. For detailed joint index conventions, refer to the [Hand Pose](https://docs.lightwheel.net/mcap_data/pose/hand#joint-index-and-conventions) and [Body Pose](https://docs.lightwheel.net/mcap_data/pose/body#joint-index-and-conventions) documentation.
+
+| Topic | Proto Message | Description |
+|-------|--------------|-------------|
+| `/session/metadata`                   | `session.metadata.SessionMetadata`            | Session-level metadata: task info, operator, episode UUID |
+| `/pose/body`                          | `pose.BodyFrame`                              | Body joint positions in world frame: 22-joint full-body or 14-joint upper-body skeleton |
+| `/pose/head_pose`                     | `pose.HeadPoseFrame`                          | Head pose (position + orientation) in world frame |
+| `/pose/headcam_pose`                  | `pose.HeadcamPoseFrame`                       | Head-mounted camera pose in world frame |
+| `/pose/left_hand`                     | `pose.LeftHandFrame`                          | Left-hand 21-joint keypoints in world frame |
+| `/pose/right_hand`                    | `pose.RightHandFrame`                         | Right-hand 21-joint keypoints in world frame |
+| `/pose/right_eye_cam`                 | `pose.RightEyeCamFrame`                       | Right eye camera pose in world frame |
+| `/annotation/segments`                | `annotation.segments.AnnotationSegment`       | Time-segmented subtask annotations (action level) |
+| `/sensor/camera/head_left/video`      | `foxglove.CompressedVideo`                    | Left head camera video stream (H.264) |
+| `/sensor/camera/head_right/video`     | `foxglove.CompressedVideo`                    | Right head camera video stream (H.264) |
+| `/sensor/camera/left_wrist/video`     | `foxglove.CompressedVideo`                    | Left wrist camera video stream (H.264) |
+| `/sensor/camera/right_wrist/video`    | `foxglove.CompressedVideo`                    | Right wrist camera video stream (H.264) |
+| `/sensor/camera/head_left/intrinsic`  | `foxglove.CameraCalibration`                  | Left head camera intrinsic calibration |
+| `/sensor/camera/head_right/intrinsic` | `foxglove.CameraCalibration`                  | Right head camera intrinsic calibration |
+| `/sensor/camera/left_wrist/intrinsic` | `foxglove.CameraCalibration`                  | Left wrist camera intrinsic calibration |
+| `/sensor/camera/right_wrist/intrinsic`| `foxglove.CameraCalibration`                  | Right wrist camera intrinsic calibration |
+| `/sensor/camera/head_left/extrinsic`  | `foxglove.FrameTransforms`                    | Left head camera extrinsic (camera pose in world frame; parent=world, child=camera) |
+| `/sensor/camera/head_right/extrinsic` | `foxglove.FrameTransforms`                    | Right head camera extrinsic |
+| `/sensor/camera/left_wrist/extrinsic` | `foxglove.FrameTransforms`                    | Left wrist camera extrinsic |
+| `/sensor/camera/right_wrist/extrinsic`| `foxglove.FrameTransforms`                    | Right wrist camera extrinsic |
+| `/sensor/camera/head_depth/image`     | `foxglove.CompressedImage`                    | Head depth camera image *(optional)* |
+| `/sensor/camera/head_depth/intrinsic` | `foxglove.CameraCalibration`                  | Head depth camera intrinsic calibration *(optional)* |
+| `/sensor/camera/head_depth/extrinsic` | `foxglove.FrameTransforms`                    | Head depth camera extrinsic *(optional)* |
+| `/pointcloud`                         | `foxglove.PointCloud`                         | 3D point cloud (x, y, z + RGBA) *(optional)* |
+| `/audio`                              | `foxglove.RawAudio`                           | Raw audio stream (PCM s16) *(optional)* |
+
+#### 3.2 Output Topics (Visualization MCAP)
+
+The following topics are written into the `_vis.mcap` file by the conversion pipeline:
+
+| Topic | Message Type | Description |
+|-------|-------------|-------------|
+| `/tf-tree/tf_tree`                                  | `foxglove.FrameTransforms`     | Coordinate frame transforms for the TF tree |
+| `/scene-update/upper_body_keypoints`                | `foxglove.SceneUpdate`         | Upper-body skeleton: 14 joints covering spine, arms, and head-to-camera bones rendered as spheres + lines |
+| `/scene-update/lower_body_keypoints`                | `foxglove.SceneUpdate`         | Lower-body skeleton: 8 joints covering hip and leg bones *(only with 22-joint full-body data)* |
+| `/scene-update/right_hand_keypoints`                | `foxglove.SceneUpdate`         | Right-hand 3D skeleton (21 joints + finger bones) |
+| `/scene-update/left_hand_keypoints`                 | `foxglove.SceneUpdate`         | Left-hand 3D skeleton (21 joints + finger bones) |
+| `/scene-update/right_hand_keypoints_2d`             | `foxglove.SceneUpdate`         | Right-hand skeleton projected for 2D overlay view |
+| `/scene-update/left_hand_keypoints_2d`              | `foxglove.SceneUpdate`         | Left-hand skeleton projected for 2D overlay view |
+| `/scene-update/head_pose_trajectory`                | `foxglove.SceneUpdate`         | Head movement trajectory |
+| `/subtask-annotation/subtask_annotation`            | `lightwheel.SubtaskAnnotation` | Structured action-level semantic annotation data |
+| `/subtask-annotation/annotation_image_annotations`  | `foxglove.ImageAnnotations`    | Subtask annotation text overlaid on the camera image |
+
+### 4. Reading from MCAP
+
+#### 4.1 Export Video (CLI)
 
 Export video requires **ffmpeg** on PATH. If not installed:
 
@@ -104,7 +155,7 @@ lw-egosuite export-video --mcap path/to/file.mcap --output output.mp4
 | `--output` | Output MP4 file path |
 | `--topic` | (Optional) CompressedVideo topic to export. Default: `/sensor/camera/head_left/video` |
 
-#### 3.2 Iterate decoded messages (Python API)
+#### 4.2 Iterate decoded messages (Python API)
 
 Iterate decoded proto messages with the built-in reader:
 
@@ -119,7 +170,7 @@ for m in iter_messages("out.mcap", topics=["/pose/body"]):
     print(m.topic, m.message)
 ```
 
-#### 3.3 Decoding camera video frames (Python API)
+#### 4.3 Decoding camera video frames (Python API)
 
 Camera streams are stored as `foxglove.CompressedVideo` messages on topics such as:
 

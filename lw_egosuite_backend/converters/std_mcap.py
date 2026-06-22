@@ -141,60 +141,6 @@ class StdAnnotationPerFrameReader(BaseReader):
             yield self.raw_topic, data, int(timestamp_ns)
 
 
-@dataclass(kw_only=True)
-class StdLowQualityReader(BaseReader):
-    """
-    Read /annotation/low_quality summary from standard MCAP, map frame_ids to
-    per-frame timestamps, and emit low-quality annotations.
-    """
-
-    file_path: Path
-
-    def setup(self):
-        self._reader = make_reader(self.file_path.open(
-            "rb"), decoder_factories=[DecoderFactory()])
-        self.raw_topic = "low-quality-annotation"
-
-    def match_processors(self):
-        self.processors = get_visualization_generators(
-            self.raw_topic, MessageTypes.PROTO
-        )
-
-    def generate_line(self) -> Generator[Tuple[str, Any, int], Any, None]:
-        raw_reader = make_reader(self.file_path.open("rb"))
-        frame_timestamps = _read_pose_body_frame_timestamps(raw_reader)
-        if not frame_timestamps:
-            return
-
-        frame_to_types = {}
-        for msg, _ in _iter_decoded(self._reader, "/annotation/low_quality"):
-            problem_types = list(getattr(msg, "problem_types", []) or [])
-            for pt in problem_types:
-                name = str(getattr(pt, "name", "unknown"))
-                frame_ids = list(getattr(pt, "frame_ids", []) or [])
-                for fid in frame_ids:
-                    idx = int(fid)
-                    if idx < 0 or idx >= len(frame_timestamps):
-                        continue
-                    frame_to_types.setdefault(idx, []).append(name)
-
-        # Skip entirely if no low-quality annotations exist
-        if not frame_to_types:
-            return
-
-        # 3) Emit one message per frame so empty frames clear previous text.
-        for frame_idx in range(len(frame_timestamps)):
-            ts_ns = int(frame_timestamps[frame_idx])
-            sec = int(ts_ns // 1_000_000_000)
-            nanos = int(ts_ns % 1_000_000_000)
-            yield self.raw_topic, {
-                "frame_number": int(frame_idx),
-                "timestamp_seconds": sec,
-                "timestamp_nanos": nanos,
-                "problem_types": frame_to_types.get(frame_idx, []),
-            }, ts_ns
-
-
 class _SimplePCD:
     """Lightweight wrapper containing only pc_data, for pickling point clouds across processes (must be a module-level class)."""
 

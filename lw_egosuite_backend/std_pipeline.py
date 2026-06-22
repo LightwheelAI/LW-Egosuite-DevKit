@@ -11,7 +11,6 @@ from lw_egosuite_backend.base.base_pipeline import BasePipeline
 from lw_egosuite_backend.mcap_writer import MCAPWriter
 from lw_egosuite_backend.converters.std_mcap import (
     StdAnnotationPerFrameReader,
-    StdLowQualityReader,
     StdPerFramePointCloudReader,
 )
 from lw_egosuite_backend.converters.pose.std_mcap import (
@@ -149,13 +148,6 @@ class StdPipeline(BasePipeline):
                 raw_topic="subtask-annotation",
             )
         )
-        self._add_reader(
-            StdLowQualityReader(
-                file_path=self.mcap,
-                raw_topic="low-quality-annotation",
-            )
-        )
-
         # 2) Pose topics -> shared reader -> tf / scene / head trajectory.
         pose_reader = StdPoseDataReader(file_path=self.mcap)
         self._add_reader(
