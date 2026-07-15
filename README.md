@@ -93,31 +93,42 @@ The following topics are expected in the raw input MCAP file. For detailed joint
 
 | Topic | Proto Message | Description |
 |-------|--------------|-------------|
-| `/session/metadata`                   | `session.metadata.SessionMetadata`            | Session-level metadata: task info, operator, episode UUID |
-| `/pose/body`                          | `pose.BodyFrame`                              | Body joint positions in world frame: 22-joint full-body or 14-joint upper-body skeleton |
-| `/pose/head_pose`                     | `pose.HeadPoseFrame`                          | Head pose (position + orientation) in world frame |
-| `/pose/headcam_pose`                  | `pose.HeadcamPoseFrame`                       | Head-mounted camera pose in world frame |
-| `/pose/left_hand`                     | `pose.LeftHandFrame`                          | Left-hand 21-joint keypoints in world frame |
-| `/pose/right_hand`                    | `pose.RightHandFrame`                         | Right-hand 21-joint keypoints in world frame |
-| `/pose/right_eye_cam`                 | `pose.RightEyeCamFrame`                       | Right eye camera pose in world frame |
-| `/annotation/segments`                | `annotation.segments.AnnotationSegment`       | Time-segmented subtask annotations (action level) |
-| `/sensor/camera/head_left/video`      | `foxglove.CompressedVideo`                    | Left head camera video stream (H.264) |
-| `/sensor/camera/head_right/video`     | `foxglove.CompressedVideo`                    | Right head camera video stream (H.264) |
-| `/sensor/camera/left_wrist/video`     | `foxglove.CompressedVideo`                    | Left wrist camera video stream (H.264) |
-| `/sensor/camera/right_wrist/video`    | `foxglove.CompressedVideo`                    | Right wrist camera video stream (H.264) |
-| `/sensor/camera/head_left/intrinsic`  | `foxglove.CameraCalibration`                  | Left head camera intrinsic calibration |
-| `/sensor/camera/head_right/intrinsic` | `foxglove.CameraCalibration`                  | Right head camera intrinsic calibration |
-| `/sensor/camera/left_wrist/intrinsic` | `foxglove.CameraCalibration`                  | Left wrist camera intrinsic calibration |
-| `/sensor/camera/right_wrist/intrinsic`| `foxglove.CameraCalibration`                  | Right wrist camera intrinsic calibration |
-| `/sensor/camera/head_left/extrinsic`  | `foxglove.FrameTransforms`                    | Left head camera extrinsic (camera pose in world frame; parent=world, child=camera) |
-| `/sensor/camera/head_right/extrinsic` | `foxglove.FrameTransforms`                    | Right head camera extrinsic |
-| `/sensor/camera/left_wrist/extrinsic` | `foxglove.FrameTransforms`                    | Left wrist camera extrinsic |
-| `/sensor/camera/right_wrist/extrinsic`| `foxglove.FrameTransforms`                    | Right wrist camera extrinsic |
-| `/sensor/camera/head_depth/image`     | `foxglove.CompressedImage`                    | Head depth camera image *(optional)* |
-| `/sensor/camera/head_depth/intrinsic` | `foxglove.CameraCalibration`                  | Head depth camera intrinsic calibration *(optional)* |
-| `/sensor/camera/head_depth/extrinsic` | `foxglove.FrameTransforms`                    | Head depth camera extrinsic *(optional)* |
-| `/pointcloud`                         | `foxglove.PointCloud`                         | 3D point cloud (x, y, z + RGBA) *(optional)* |
-| `/audio`                              | `foxglove.RawAudio`                           | Raw audio stream (PCM s16) *(optional)* |
+| `/session/metadata`                         | `session.SessionMetadata`                     | Session-level metadata: task info, operator, episode UUID |
+| `/pose/body`                                | `pose.BodyFrame`                              | Body joint positions in world frame: `/pose/body` (22-joint full-body), `/pose/upper_body` (14-joint upper-body), or `/pose/lower_body` (8-joint lower-body) |
+| `/pose/head`                                | `pose.HeadFrame`                              | Head pose (position + orientation) in world frame |
+| `/pose/headcam`                             | `pose.HeadCamFrame`                           | Head-mounted camera pose in world frame |
+| `/pose/left_hand`                           | `pose.LeftHandFrame`                          | Left-hand 21-joint keypoints in world frame |
+| `/pose/right_hand`                          | `pose.RightHandFrame`                         | Right-hand 21-joint keypoints in world frame |
+| `/pose/right_eye_cam`                       | `pose.RightEyeCamFrame`                       | Right eye camera pose in world frame |
+| `/annotation/semantic_segments`             | `annotation.SemanticSegment`                  | Time-segmented subtask annotations (action level) |
+| `/sensor/camera/head_left/video`            | `foxglove.CompressedVideo`                    | Left head camera undistorted video stream (H.264) |
+| `/sensor/camera/head_right/video`           | `foxglove.CompressedVideo`                    | Right head camera undistorted video stream (H.264) |
+| `/sensor/camera/head_left/intrinsic`        | `foxglove.CameraCalibration`                  | Left head camera intrinsic calibration |
+| `/sensor/camera/head_right/intrinsic`       | `foxglove.CameraCalibration`                  | Right head camera intrinsic calibration |
+| `/sensor/camera/head_left/extrinsic`        | `foxglove.FrameTransforms`                    | Left head camera extrinsic (camera pose in world frame; parent=world, child=camera) |
+| `/sensor/camera/head_right/extrinsic`       | `foxglove.FrameTransforms`                    | Right head camera extrinsic |
+| `/sensor/camera/left_wrist/video`           | `foxglove.CompressedVideo`                    | Left wrist camera undistorted video stream (H.264) |
+| `/sensor/camera/right_wrist/video`          | `foxglove.CompressedVideo`                    | Right wrist camera undistorted video stream (H.264) |
+| `/sensor/camera/left_wrist/intrinsic`       | `foxglove.CameraCalibration`                  | Left wrist camera intrinsic calibration |
+| `/sensor/camera/right_wrist/intrinsic`      | `foxglove.CameraCalibration`                  | Right wrist camera intrinsic calibration |
+| `/sensor/camera/head_depth/image`           | `foxglove.CompressedImage`                    | Head depth camera image *(optional)* |
+| `/sensor/camera/head_depth/intrinsic`       | `foxglove.CameraCalibration`                  | Head depth camera intrinsic calibration *(optional)* |
+| `/sensor/camera/head_depth/extrinsic`       | `foxglove.FrameTransforms`                    | Head depth camera extrinsic *(optional)* |
+| `/sensor/camera_raw/head_left/video`        | `foxglove.CompressedVideo`                    | Left head camera raw video stream *(optional)* |
+| `/sensor/camera_raw/head_right/video`       | `foxglove.CompressedVideo`                    | Right head camera raw video stream *(optional)* |
+| `/sensor/camera_raw/left_wrist/video`       | `foxglove.CompressedVideo`                    | Left wrist camera raw video stream *(optional)* |
+| `/sensor/camera_raw/right_wrist/video`      | `foxglove.CompressedVideo`                    | Right wrist camera raw video stream *(optional)* |
+| `/sensor/camera_raw/head_left/calibration`  | `sensor.camera.RawCameraCalibration`          | Left head camera raw intrinsic calibration *(optional)* |
+| `/sensor/camera_raw/head_right/calibration` | `sensor.camera.RawCameraCalibration`          | Right head camera raw intrinsic calibration *(optional)* |
+| `/sensor/camera_raw/left_wrist/calibration` | `sensor.camera.RawCameraCalibration`          | Left wrist camera raw intrinsic calibration *(optional)* |
+| `/sensor/camera_raw/right_wrist/calibration`| `sensor.camera.RawCameraCalibration`          | Right wrist camera raw intrinsic calibration *(optional)* |
+| `/annotation/bad_frame/pose/upper_body`     | `annotation.BadFrameBody`                     | Per-frame upper-body quality flag (is_bad + problem_type) *(optional)* |
+| `/annotation/bad_frame/pose/lower_body`     | `annotation.BadFrameBody`                     | Per-frame lower-body quality flag *(optional)* |
+| `/annotation/bad_frame/pose/hand`           | `annotation.BadFrameHand`                     | Per-frame hand quality flag *(optional)* |
+| `/annotation/bad_frame/camera/head_left`    | `annotation.BadFrameImage`                    | Per-frame head-left camera quality flag *(optional)* |
+| `/annotation/bad_frame/camera/left_wrist`   | `annotation.BadFrameImage`                    | Per-frame left-wrist camera quality flag *(optional)* |
+| `/annotation/bad_frame/camera/right_wrist`  | `annotation.BadFrameImage`                    | Per-frame right-wrist camera quality flag *(optional)* |
+| `/sensor/audio`                             | `foxglove.RawAudio`                           | Raw audio stream (PCM s16) *(optional)* |
 
 </details>
 
@@ -128,15 +139,16 @@ The following topics are written into the `_vis.mcap` file by the conversion pip
 | Topic | Message Type | Description |
 |-------|-------------|-------------|
 | `/tf-tree/tf_tree`                                  | `foxglove.FrameTransforms`     | Coordinate frame transforms for the TF tree |
-| `/scene-update/upper_body_keypoints`                | `foxglove.SceneUpdate`         | Upper-body skeleton: 14 joints covering spine, arms, and head-to-camera bones rendered as spheres + lines |
-| `/scene-update/lower_body_keypoints`                | `foxglove.SceneUpdate`         | Lower-body skeleton: 8 joints covering hip and leg bones *(only with 22-joint full-body data)* |
+| `/scene-update/upper_body_keypoints`                | `foxglove.SceneUpdate`         | Upper-body skeleton (spine + arms) rendered as spheres + lines |
+| `/scene-update/lower_body_keypoints`                | `foxglove.SceneUpdate`         | Lower-body skeleton (hips + legs) rendered as spheres + lines *(only when lower-body joints are present)* |
 | `/scene-update/right_hand_keypoints`                | `foxglove.SceneUpdate`         | Right-hand 3D skeleton (21 joints + finger bones) |
 | `/scene-update/left_hand_keypoints`                 | `foxglove.SceneUpdate`         | Left-hand 3D skeleton (21 joints + finger bones) |
 | `/scene-update/right_hand_keypoints_2d`             | `foxglove.SceneUpdate`         | Right-hand skeleton projected for 2D overlay view |
 | `/scene-update/left_hand_keypoints_2d`              | `foxglove.SceneUpdate`         | Left-hand skeleton projected for 2D overlay view |
-| `/scene-update/head_pose_trajectory`                | `foxglove.SceneUpdate`         | Head movement trajectory |
-| `/subtask-annotation/subtask_annotation`            | `lightwheel.SubtaskAnnotation` | Structured action-level semantic annotation data |
-| `/subtask-annotation/annotation_image_annotations`  | `foxglove.ImageAnnotations`    | Subtask annotation text overlaid on the camera image |
+| `/scene-update/head_trajectory`                     | `foxglove.SceneUpdate`         | Head movement trajectory (jet colormap dots, last 300 frames) |
+| `/scene-update/foot_trajectory`                     | `foxglove.SceneUpdate`         | Foot movement trajectory: left and right foot (jet colormap dots, last 100 frames) *(only with lower-body data)* |
+| `/state-transitions/subtask_description`            | `foxglove.Log`                 | Subtask description text; skill appended when present |
+| `/image-annotations/semantic_segments`              | `foxglove.ImageAnnotations`    | Subtask annotation text overlaid on the camera image |
 
 ### 4. Reading from MCAP
 

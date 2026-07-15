@@ -18,6 +18,7 @@ from lw_egosuite_backend.converters.pose.std_mcap import (
     StdPoseSceneReader,
     StdPoseTFReader,
     StdHeadPoseTrajectoryReader,
+    StdFootTrajectoryReader,
 )
 
 
@@ -165,8 +166,15 @@ class StdPipeline(BasePipeline):
         self._add_reader(
             StdHeadPoseTrajectoryReader(
                 pose_data_reader=pose_reader,
-                raw_topic="scene-update/head_pose_trajectory",
-                points_number_to_show=int(30 * 1.5),
+                raw_topic="scene-update/head_trajectory",
+                points_number_to_show=300,
+            )
+        )
+        self._add_reader(
+            StdFootTrajectoryReader(
+                pose_data_reader=pose_reader,
+                raw_topic="scene-update/foot_trajectory",
+                points_number_to_show=100,
             )
         )
 
