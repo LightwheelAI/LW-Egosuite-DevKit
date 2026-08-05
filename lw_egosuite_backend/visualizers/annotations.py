@@ -89,23 +89,17 @@ def _add_wrapped_text(
 
 
 @register("subtask-annotation")
-@register("*/subtask_annotation")
 class AnnotationsGenerator(Generator):
 
     @property
     def outputs(self) -> Dict[str, str]:
-        prefix = f"/{self._stem}" if getattr(self, "_stem", None) else ""
-        return dict(
-            {f"{prefix}/subtask_annotation": "lightwheel.SubtaskAnnotation"},
-            **{f"{prefix}/annotation_image_annotations": "foxglove.ImageAnnotations"}
-        )
+        return {
+            "/state-transitions/subtask_description": "foxglove.Log",
+            "/image-annotations/semantic_segments": "foxglove.ImageAnnotations",
+        }
 
     def setup(self, **kwargs):
-        parts = self.src_topic.split("/")
-        self._stem = parts[0] if parts and not self.src_topic.startswith(
-            "/") else None
-        self.subtask_annotation_cls = self.get_message_type(
-            "lightwheel.SubtaskAnnotation")
+        self.log_cls = self.get_message_type("foxglove.Log")
         self.image_annotations_cls = self.get_message_type(
             "foxglove.ImageAnnotations")
 
@@ -115,10 +109,7 @@ class AnnotationsGenerator(Generator):
         :param data: Dictionary containing annotation information
         :param timestamp: Timestamp
         """
-        prefix = f"/{self._stem}" if getattr(self, "_stem", None) else ""
-
-        # Process lightwheel.SubtaskAnnotation message
-        subtask_msg = self.subtask_annotation_cls()
+        desc_msg = self.log_cls()
         image_annotations_msg = self.image_annotations_cls()
 
         has_desc = False
@@ -137,10 +128,6 @@ class AnnotationsGenerator(Generator):
                 sec = int(timestamp // 1_000_000_000)
                 nanos = int(timestamp % 1_000_000_000)
 
-            subtask_msg.data = str(description)
-            subtask_msg.timestamp.seconds = sec
-            subtask_msg.timestamp.nanos = nanos
-
             if type(description) == dict:
                 annotation_dict = description
                 desc_part = (annotation_dict.get("description") or "").strip()
@@ -155,6 +142,15 @@ class AnnotationsGenerator(Generator):
             has_desc = bool(desc_line and has_annotation)
             has_caption = bool(caption_part)
             has_skill = bool(skill_part and has_annotation)
+
+            # Fill foxglove.Log message; append skill after the description if present
+            log_text = desc_line
+            if has_skill:
+                log_text = f"{log_text} (skill: {skill_part})" if log_text else f"skill: {skill_part}"
+            desc_msg.timestamp.seconds = sec
+            desc_msg.timestamp.nanos = nanos
+            desc_msg.message = log_text
+            desc_msg.level = 2  # INFO
             MARGIN_X = 40
             CAPTION_Y = 70
             CAPTION_FONT_SIZE = 36
@@ -212,6 +208,6 @@ class AnnotationsGenerator(Generator):
                     bg_rgba=(40 / 255.0, 40 / 255.0, 40 / 255.0, 0.8),
                 )
 
-        yield f"{prefix}/subtask_annotation", subtask_msg
+        yield "/state-transitions/subtask_description", desc_msg
         if has_desc or has_caption or has_skill:
-            yield f"{prefix}/annotation_image_annotations", image_annotations_msg
+            yield "/image-annotations/semantic_segments", image_annotations_msg

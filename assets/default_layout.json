@@ -351,13 +351,13 @@
           "pointSize": 1,
           "pointShape": "square"
         },
-        "/pose/head_pose_trajectory": {
+        "/pose/head_trajectory": {
           "visible": true
         },
         "/pose_trim/left_hand_keyponts": {
           "visible": true
         },
-        "/pose_trim/head_pose_trajectory": {
+        "/pose_trim/head_trajectory": {
           "visible": true
         },
         "/pose_trim/right_hand_keyponts": {
@@ -394,7 +394,7 @@
           "distance": 0.139,
           "planarProjectionFactor": 1
         },
-        "/scene-update/head_pose_trajectory": {
+        "/scene-update/head_trajectory": {
           "visible": true
         },
         "/pointcloud": {

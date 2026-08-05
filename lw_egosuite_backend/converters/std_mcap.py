@@ -37,7 +37,7 @@ class StdAnnotationPerFrameReader(BaseReader):
 
     def generate_line(self) -> Generator[Tuple[str, Any, int], Any, None]:
         """
-        Read /annotation/segments and expand into per-frame annotations.
+        Read /annotation/semantic_segments and expand into per-frame annotations.
 
         Supports two MCAP shapes produced by annotation_segments_json_to_proto:
         - tier1/tier2: first message is tier1 (caption only, no time range); rest are tier2
@@ -54,19 +54,23 @@ class StdAnnotationPerFrameReader(BaseReader):
 
         episode_caption = ""
         segments = []
-        for msg, _ in _iter_decoded(self._reader, "/annotation/segments"):
+        for msg, _ in _iter_decoded(self._reader, "/annotation/semantic_segments"):
+            # New proto: each MCAP message is one segment.
+            # task_description is top-level; segment is a singular sub-message.
+            task = str(getattr(msg, "task_description", "") or "")
+            if task and not episode_caption:
+                episode_caption = task
+
             seg = getattr(msg, "segment", None)
             if seg is None:
                 continue
 
-            task = str(getattr(seg, "task", "") or "")
-            subtask = str(getattr(seg, "subtask", "") or "")
-            skill = str(getattr(seg, "skill", "") or "")
+            subtask = str(getattr(seg, "subtask_description", "") or "")
+            # skill is now a repeated field — join into a single string
+            skill_list = list(getattr(seg, "skill", []) or [])
+            skill = ", ".join(str(s) for s in skill_list)
             start_time = getattr(seg, "start_time", None)
             end_time = getattr(seg, "end_time", None)
-
-            if task and not episode_caption:
-                episode_caption = task
 
             if start_time is not None and end_time is not None:
                 segments.append({
@@ -185,14 +189,14 @@ def _pointcloud_msg_to_numpy(pointcloud_msg) -> Optional[np.ndarray]:
 
 
 def _read_pose_body_frame_timestamps(reader) -> list:
-    """Read frame timestamps from /pose/head_pose on the given reader."""
+    """Read frame timestamps from /pose/head on the given reader."""
     out = []
-    for _schema, channel, message in reader.iter_messages(topics=["/pose/head_pose"]):
-        if channel.topic == "/pose/head_pose":
+    for _schema, channel, message in reader.iter_messages(topics=["/pose/head"]):
+        if channel.topic == "/pose/head":
             out.append(int(getattr(message, "log_time", 0)))
     if not out:
         raise ValueError(
-            "No /pose/head_pose messages found in input MCAP. "
+            "No /pose/head messages found in input MCAP. "
             "Cannot build frame timeline for annotation visualization."
         )
     return out

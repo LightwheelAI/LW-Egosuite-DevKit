@@ -12,7 +12,6 @@ UPPER_BODY_BONES_22 = [
     (0, 3), (3, 6), (6, 9), (9, 12), (12, 15),    # Spine
     (9, 13), (13, 16), (16, 18), (18, 20),         # Left arm
     (9, 14), (14, 17), (17, 19), (19, 21),         # Right arm
-    (15, 22), (15, 23),                             # head->cam
 ]
 
 LOWER_BODY_BONES_22 = [
@@ -29,7 +28,6 @@ UPPER_BODY_BONES_14 = [
     (0, 1), (1, 2), (2, 3), (3, 4), (4, 7),      # Spine
     (3, 5), (5, 8), (8, 10), (10, 12),            # Left arm
     (3, 6), (6, 9), (9, 11), (11, 13),            # Right arm
-    (7, 14), (7, 15),                               # head->cam
 ]
 
 HAND_BONES = [
@@ -199,15 +197,15 @@ class SceneUpdateGenerator(Generator):
             yield f"/{self._stem}/left_hand_keypoints_2d" if self._stem else "/left_hand_keypoints_2d", update_msg_l_hand
 
 
-@register("/head-pose-trajectory")
-@register("*/head_pose_trajectory")
+@register("/head-trajectory")
+@register("*/head_trajectory")
 class HeadPoseTrajectoryGenerator(Generator):
     """Convert head trajectory to foxglove.SceneUpdate: trajectory line (LINE_STRIP) + current-frame head sphere marker, for display in Foxglove 3D view."""
 
     @property
     def outputs(self) -> Dict[str, str]:
         prefix = f"/{self._stem}" if getattr(self, "_stem", None) else ""
-        return {f"{prefix}/head_pose_trajectory": "foxglove.SceneUpdate"}
+        return {f"{prefix}/head_trajectory": "foxglove.SceneUpdate"}
 
     def setup(self, **kwargs):
         parts = self.src_topic.split("/")
@@ -220,13 +218,14 @@ class HeadPoseTrajectoryGenerator(Generator):
             return
         trajectory_points = data.get("trajectory_points") or []
         current_head = data.get("current_head")
+        current_body_head = data.get("current_body_head")
         timestamp_obj = data.get("timestamp_obj", {})
         if not current_head:
             return
 
         update_msg = self.scene_update_cls()
         entity = update_msg.entities.add()
-        entity.id = "head_pose_trajectory"
+        entity.id = "head_trajectory"
         entity.frame_id = "world"
         entity.timestamp.seconds = timestamp_obj.get("seconds", 0)
         entity.timestamp.nanos = timestamp_obj.get("nanos", 0)
@@ -234,38 +233,133 @@ class HeadPoseTrajectoryGenerator(Generator):
         entity.lifetime.nanos = 0  # 0 means permanent display, never disappears
         entity.frame_locked = True
 
-        # Trajectory line: LINE_STRIP connecting head positions from frame 0 to the current frame
-        # LINE_STRIP requires at least 2 points to be displayed
+        # Trajectory dots: jet colormap (blue→cyan→green→yellow→orange→red)
+        # oldest = blue, newest = red; older dots are more transparent
+        n = len(trajectory_points)
+        for i, pt in enumerate(trajectory_points):
+            if not (isinstance(pt, dict) and "x" in pt and "y" in pt and "z" in pt):
+                continue
+            t = i / max(n - 1, 1)  # 0.0 = oldest, 1.0 = newest
+            r = min(max(1.5 - abs(4 * t - 3), 0.0), 1.0)
+            g = min(max(1.5 - abs(4 * t - 2), 0.0), 1.0)
+            b = min(max(1.5 - abs(4 * t - 1), 0.0), 1.0)
+            sphere = entity.spheres.add()
+            sphere.pose.position.x = float(pt["x"])
+            sphere.pose.position.y = float(pt["y"])
+            sphere.pose.position.z = float(pt["z"])
+            sphere.pose.orientation.w = 1.0
+            dot_size = 0.012 + 0.008 * t
+            sphere.size.x = dot_size
+            sphere.size.y = dot_size
+            sphere.size.z = dot_size
+            sphere.color.r = r
+            sphere.color.g = g
+            sphere.color.b = b
+            sphere.color.a = 0.3 + 0.7 * t
 
-        if trajectory_points and len(trajectory_points) >= 2:
-            line = entity.lines.add()
-            line.type = 0  # LINE_STRIP
-            line.thickness = 9
-            line.scale_invariant = True
-            line.color.r = 0.2
-            line.color.g = 0.8
-            line.color.b = 0.2
-            line.color.a = 1.0
-            for pt in trajectory_points:
-                if isinstance(pt, dict) and "x" in pt and "y" in pt and "z" in pt:
-                    p = line.points.add()
-                    p.x = float(pt["x"])
-                    p.y = float(pt["y"])
-                    p.z = float(pt["z"])
-
-        # Current frame head sphere marker (larger, yellow, indicating "current head")ead"）
-        if isinstance(current_head, dict) and "x" in current_head and "y" in current_head and "z" in current_head:
+        # Current frame head sphere (yellow)
+        if isinstance(current_head, dict) and "x" in current_head:
             sphere = entity.spheres.add()
             sphere.pose.position.x = float(current_head["x"])
             sphere.pose.position.y = float(current_head["y"])
             sphere.pose.position.z = float(current_head["z"])
             sphere.pose.orientation.w = 1.0
-            sphere.size.x = 0.04  # Larger sphere
-            sphere.size.y = 0.04
-            sphere.size.z = 0.04
-            sphere.color.r = 1.0  # Yellow
+            sphere.size.x = sphere.size.y = sphere.size.z = 0.04
+            sphere.color.r = 1.0
             sphere.color.g = 0.85
             sphere.color.b = 0.0
             sphere.color.a = 1.0
 
-        yield f"/{self._stem}/head_pose_trajectory" if self._stem else "/head_pose_trajectory", update_msg
+        yield f"/{self._stem}/head_trajectory" if self._stem else "/head_trajectory", update_msg
+
+
+@register("/foot-trajectory")
+@register("*/foot_trajectory")
+class FootTrajectoryGenerator(Generator):
+    """Foot trajectory: jet colormap dots for left and right foot."""
+
+    @property
+    def outputs(self) -> Dict[str, str]:
+        prefix = f"/{self._stem}" if getattr(self, "_stem", None) else ""
+        return {f"{prefix}/foot_trajectory": "foxglove.SceneUpdate"}
+
+    def setup(self, **kwargs):
+        parts = self.src_topic.split("/")
+        self._stem = parts[0] if parts and not self.src_topic.startswith("/") else None
+        self.scene_update_cls = self.get_message_type("foxglove.SceneUpdate")
+
+    def generate(self, data, timestamp):
+        if not isinstance(data, dict):
+            return
+        left_traj = data.get("left_trajectory") or []
+        right_traj = data.get("right_trajectory") or []
+        current_left = data.get("current_left")
+        current_right = data.get("current_right")
+        timestamp_obj = data.get("timestamp_obj", {})
+
+        if not (left_traj or right_traj):
+            return
+
+        update_msg = self.scene_update_cls()
+        entity = update_msg.entities.add()
+        entity.id = "foot_trajectory"
+        entity.frame_id = "world"
+        entity.timestamp.seconds = timestamp_obj.get("seconds", 0)
+        entity.timestamp.nanos = timestamp_obj.get("nanos", 0)
+        entity.lifetime.seconds = 0
+        entity.lifetime.nanos = 0
+        entity.frame_locked = True
+
+        def _jet_dots(points, dot_base_size):
+            n = len(points)
+            for i, pt in enumerate(points):
+                if not (isinstance(pt, dict) and "x" in pt and "y" in pt and "z" in pt):
+                    continue
+                t = i / max(n - 1, 1)
+                r = min(max(1.5 - abs(4 * t - 3), 0.0), 1.0)
+                g = min(max(1.5 - abs(4 * t - 2), 0.0), 1.0)
+                b = min(max(1.5 - abs(4 * t - 1), 0.0), 1.0)
+                sphere = entity.spheres.add()
+                sphere.pose.position.x = float(pt["x"])
+                sphere.pose.position.y = float(pt["y"])
+                sphere.pose.position.z = float(pt["z"])
+                sphere.pose.orientation.w = 1.0
+                s = dot_base_size + 0.006 * t
+                sphere.size.x = s
+                sphere.size.y = s
+                sphere.size.z = s
+                sphere.color.r = r
+                sphere.color.g = g
+                sphere.color.b = b
+                sphere.color.a = 0.3 + 0.7 * t
+
+        _jet_dots(left_traj, 0.010)
+        _jet_dots(right_traj, 0.010)
+
+        # Current left foot sphere (larger, blue)
+        if isinstance(current_left, dict) and "x" in current_left:
+            sphere = entity.spheres.add()
+            sphere.pose.position.x = float(current_left["x"])
+            sphere.pose.position.y = float(current_left["y"])
+            sphere.pose.position.z = float(current_left["z"])
+            sphere.pose.orientation.w = 1.0
+            sphere.size.x = sphere.size.y = sphere.size.z = 0.035
+            sphere.color.r = 0.2
+            sphere.color.g = 0.4
+            sphere.color.b = 1.0
+            sphere.color.a = 1.0
+
+        # Current right foot sphere (larger, pink)
+        if isinstance(current_right, dict) and "x" in current_right:
+            sphere = entity.spheres.add()
+            sphere.pose.position.x = float(current_right["x"])
+            sphere.pose.position.y = float(current_right["y"])
+            sphere.pose.position.z = float(current_right["z"])
+            sphere.pose.orientation.w = 1.0
+            sphere.size.x = sphere.size.y = sphere.size.z = 0.035
+            sphere.color.r = 1.0
+            sphere.color.g = 0.4
+            sphere.color.b = 0.7
+            sphere.color.a = 1.0
+
+        yield f"/{self._stem}/foot_trajectory" if self._stem else "/foot_trajectory", update_msg
