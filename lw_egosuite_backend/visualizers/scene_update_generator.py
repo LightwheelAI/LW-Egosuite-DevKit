@@ -7,7 +7,6 @@ from typing import Dict
 #   6=spine2, 7=left_ankle, 8=right_ankle, 9=spine3, 10=left_foot, 11=right_foot,
 #   12=neck, 13=left_collar, 14=right_collar, 15=head, 16=left_shoulder,
 #   17=right_shoulder, 18=left_elbow, 19=right_elbow, 20=left_wrist, 21=right_wrist
-# After appending: 22=headcam_pose, 23=right_eye_cam_pose
 UPPER_BODY_BONES_22 = [
     (0, 3), (3, 6), (6, 9), (9, 12), (12, 15),    # Spine
     (9, 13), (13, 16), (16, 18), (18, 20),         # Left arm
@@ -70,10 +69,6 @@ class SceneUpdateGenerator(Generator):
 
     def generate(self, data, timestamp):
         raw_body_pts = data["joints"]["body"]
-        world_body_pts = list(raw_body_pts)
-        world_body_pts.append(data["headcam_pose"])
-        world_body_pts.append(data["right_eye_cam_pose"])
-
         world_l_hand_pts = [p for p in data["joints"]["left_hand"]]
         world_r_hand_pts = [p for p in data["joints"]["right_hand"]]
 
@@ -129,7 +124,7 @@ class SceneUpdateGenerator(Generator):
                 p_end.x = points[end_idx]["x"]
                 p_end.y = points[end_idx]["y"]
                 p_end.z = points[end_idx]["z"]
-        if len(world_body_pts) > 0:
+        if len(raw_body_pts) > 0:
             is_22 = len(raw_body_pts) > 14
             upper_bones = UPPER_BODY_BONES_22 if is_22 else UPPER_BODY_BONES_14
             lower_bones = LOWER_BODY_BONES_22
@@ -139,26 +134,26 @@ class SceneUpdateGenerator(Generator):
 
             upper_indices = sorted(
                 {idx for pair in upper_bones for idx in pair if idx <
-                    len(world_body_pts)}
+                    len(raw_body_pts)}
             )
             update_msg_upper, entity_upper = create_base_entity(
                 "upper_body_skeleton")
-            add_spheres(entity_upper, [world_body_pts[i]
+            add_spheres(entity_upper, [raw_body_pts[i]
                         for i in upper_indices], 0.022, COLOR_JOINT)
-            add_lines(entity_upper, world_body_pts,
+            add_lines(entity_upper, raw_body_pts,
                       upper_bones, 0.01, COLOR_BODY)
             yield upper_topic, update_msg_upper
 
             if is_22:
                 lower_indices = sorted(
                     {idx for pair in lower_bones for idx in pair if idx <
-                        len(world_body_pts)}
+                        len(raw_body_pts)}
                 )
                 update_msg_lower, entity_lower = create_base_entity(
                     "lower_body_skeleton")
-                add_spheres(entity_lower, [world_body_pts[i]
+                add_spheres(entity_lower, [raw_body_pts[i]
                             for i in lower_indices], 0.022, COLOR_JOINT)
-                add_lines(entity_lower, world_body_pts,
+                add_lines(entity_lower, raw_body_pts,
                           lower_bones, 0.01, COLOR_BODY)
                 yield lower_topic, update_msg_lower
 
