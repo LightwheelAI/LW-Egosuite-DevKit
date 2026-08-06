@@ -44,4 +44,7 @@ class FrameTFGenerator(Generator):
                 transform.timestamp.seconds = int(data["timestamp_seconds"])
                 transform.timestamp.nanos = int(data["timestamp_nanos"])
 
+        if not res_msg.transforms:
+            return
+
         yield self.output_topic_name, res_msg

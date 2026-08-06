@@ -11,7 +11,6 @@ from lw_egosuite_backend.base.base_pipeline import BasePipeline
 from lw_egosuite_backend.mcap_writer import MCAPWriter
 from lw_egosuite_backend.converters.std_mcap import (
     StdAnnotationPerFrameReader,
-    StdPerFramePointCloudReader,
 )
 from lw_egosuite_backend.converters.pose.std_mcap import (
     StdPoseDataReader,
@@ -46,9 +45,6 @@ class StdPipeline(BasePipeline):
     """MCAP writer for the output visualization file."""
 
     metadata_mcap: Optional[Dict[str, Any]] = None
-
-    include_2d_projection: bool = False
-    """If True, include the /pointcloud/2d_projection topic in the output."""
 
     def __post_init__(self):
         self.mcap = Path(self.mcap).resolve()
@@ -142,13 +138,21 @@ class StdPipeline(BasePipeline):
         self.output_topic2pb2 = {}
         self._load_session_metadata()
 
-        # 1) Annotation: /annotation/per_frame -> subtask-annotation -> lightwheel.SubtaskAnnotation
-        self._add_reader(
-            StdAnnotationPerFrameReader(
-                file_path=self.mcap,
-                raw_topic="subtask-annotation",
+        # Check which topics exist in the input MCAP
+        reader = make_reader(self.mcap.open("rb"))
+        available_topics = set()
+        summary = reader.get_summary()
+        if summary and summary.channels:
+            available_topics = {ch.topic for ch in summary.channels.values()}
+
+        # 1) Annotation: only if /annotation/semantic_segments exists
+        if "/annotation/semantic_segments" in available_topics:
+            self._add_reader(
+                StdAnnotationPerFrameReader(
+                    file_path=self.mcap,
+                    raw_topic="subtask-annotation",
+                )
             )
-        )
         # 2) Pose topics -> shared reader -> tf / scene / head trajectory.
         pose_reader = StdPoseDataReader(file_path=self.mcap)
         self._add_reader(
@@ -177,15 +181,6 @@ class StdPipeline(BasePipeline):
                 points_number_to_show=100,
             )
         )
-
-        # 3) Point cloud: per-frame (with data or empty)
-        if self.include_2d_projection:
-            self._add_reader(
-                StdPerFramePointCloudReader(
-                    file_path=self.mcap,
-                    raw_topic="pointcloud/2d_projection",
-                )
-            )
 
     def set_writer(self):
         # BasePipeline expects writer.topic2pb2 to be populated.

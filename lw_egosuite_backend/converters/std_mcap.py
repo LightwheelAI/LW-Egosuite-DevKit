@@ -145,48 +145,9 @@ class StdAnnotationPerFrameReader(BaseReader):
             yield self.raw_topic, data, int(timestamp_ns)
 
 
-class _SimplePCD:
-    """Lightweight wrapper containing only pc_data, for pickling point clouds across processes (must be a module-level class)."""
-
-    def __init__(self, pc_data):
-        self.pc_data = pc_data
-
-
 # -----------------------------------------------------------------------------
-# Shared helpers (MCAP iteration, point cloud conversion)
+# Shared helpers (MCAP iteration)
 # -----------------------------------------------------------------------------
-
-def _pointcloud_msg_to_numpy(pointcloud_msg) -> Optional[np.ndarray]:
-    """Convert foxglove.PointCloud message to numpy structured array."""
-    if not pointcloud_msg.data:
-        return None
-    fields = {}
-    for field in pointcloud_msg.fields:
-        fields[field.name] = {"offset": field.offset, "type": field.type}
-    point_stride = pointcloud_msg.point_stride
-    data = pointcloud_msg.data
-    num_points = len(data) // point_stride
-    if num_points == 0:
-        return None
-    dtype = []
-    for field_name, field_info in fields.items():
-        if field_info["type"] == 7:  # FLOAT32
-            dtype.append((field_name, np.float32))
-        elif field_info["type"] == 1:  # UINT8
-            dtype.append((field_name, np.uint8))
-    if not dtype:
-        return None
-    points = np.zeros(num_points, dtype=dtype)
-    for i in range(num_points):
-        byte_offset = i * point_stride
-        for field_name, field_info in fields.items():
-            field_offset = byte_offset + field_info["offset"]
-            if field_info["type"] == 7:
-                points[field_name][i] = struct.unpack("<f", data[field_offset : field_offset + 4])[0]
-            elif field_info["type"] == 1:
-                points[field_name][i] = data[field_offset]
-    return points
-
 
 def _read_pose_body_frame_timestamps(reader) -> list:
     """Read frame timestamps from /pose/head on the given reader."""
@@ -217,69 +178,3 @@ def _iter_decoded(reader, topic: str) -> Generator[Tuple[Any, int], None, None]:
             except ValueError:
                 _topic, msg, ts = item
         yield msg, ts
-
-
-@dataclass(kw_only=True)
-class StdPerFramePointCloudReader(BaseReader):
-    """
-    Emit one point cloud message per frame (from /pose/body). Frames with point cloud
-    data get that data; frames without get an empty PointCloud.
-    """
-
-    file_path: Path
-    raw_topic: str = "pointcloud/2d_projection"
-    max_time_diff_ns: int = 100_000_000  # 100ms
-    def __post_init__(self):
-        super().__post_init__()
-
-    def setup(self):
-        self._reader = make_reader(
-            self.file_path.open("rb"), decoder_factories=[DecoderFactory()]
-        )
-
-    def match_processors(self):
-        from lw_egosuite_backend.visualizers import (
-            get_visualization_generators,
-            MessageTypes,
-        )
-        self.processors = get_visualization_generators(
-            self.raw_topic, MessageTypes.PROTO
-        )
-
-    def generate_line(self) -> Generator[Tuple[str, Any, int], Any, None]:
-        frame_timestamps = _read_pose_body_frame_timestamps(self._reader)
-        if not frame_timestamps:
-            return
-
-        pc_list: list = []
-        for msg, timestamp in _iter_decoded(self._reader, "/pointcloud"):
-            pc_data = _pointcloud_msg_to_numpy(msg)
-            if pc_data is not None:
-                pc_list.append((timestamp, pc_data))
-
-        max_diff = self.max_time_diff_ns
-        # Time alignment: assign each point cloud to the temporally closest frame
-        # (within 100ms); at most one pc per frame; unmatched frames get empty.
-        frame_to_pc: Dict[int, Tuple[int, Any]] = {}  # frame_ts -> (pc_ts, pc_data)
-        for pc_ts, pc_data in pc_list:
-            best_frame_ts = None
-            best_diff = max_diff + 1
-            for frame_ts in frame_timestamps:
-                d = abs(pc_ts - frame_ts)
-                if d < best_diff:
-                    best_diff = d
-                    best_frame_ts = frame_ts
-            if best_frame_ts is None:
-                continue
-            existing = frame_to_pc.get(best_frame_ts)
-            if existing is None or best_diff < abs(existing[0] - best_frame_ts):
-                frame_to_pc[best_frame_ts] = (pc_ts, pc_data)
-
-        for frame_ts in frame_timestamps:
-            assigned = frame_to_pc.get(frame_ts)
-            if assigned is not None:
-                _pc_ts, pc_data = assigned
-                payload = {"pcd_data": _SimplePCD(pc_data)}
-            else:
-                payload = {"pcd_data": None}
-            yield self.raw_topic, payload, frame_ts

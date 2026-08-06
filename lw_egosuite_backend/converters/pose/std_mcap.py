@@ -305,14 +305,15 @@ class StdHeadPoseTrajectoryReader(BaseReader):
     def generate_line(self) -> Generator[Tuple[str, Any, int], Any, None]:
         trajectory_points: List[Dict[str, float]] = []
         for ts, frame in self.pose_data_reader.load_frames().items():
-            head_pose = frame.get("head_pose") or {"x": 0.0, "y": 0.0, "z": 0.0}
-
-            current_head = {
-                "x": float(head_pose.get("x", 0.0)),
-                "y": float(head_pose.get("y", 0.0)),
-                "z": float(head_pose.get("z", 0.0)),
-            }
-            trajectory_points.append(current_head)
+            head_pose = frame.get("head_pose")
+            current_head = None
+            if head_pose:
+                current_head = {
+                    "x": float(head_pose.get("x", 0.0)),
+                    "y": float(head_pose.get("y", 0.0)),
+                    "z": float(head_pose.get("z", 0.0)),
+                }
+                trajectory_points.append(current_head)
 
             # Body head joint (full-skeleton index 15) for the head↔body-head line
             body = frame.get("body") or []
