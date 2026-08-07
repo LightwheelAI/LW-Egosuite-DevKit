@@ -73,9 +73,6 @@
           },
           "/subtask-annotation/annotation_image_annotations": {
             "visible": true
-          },
-          "/image-annotations/semantic_segments": {
-            "visible": true
           }
         },
         "calibrationTopic": "/sensor/camera/head_left/intrinsic"
@@ -84,13 +81,13 @@
     "3D!3kp7qj7": {
       "cameraState": {
         "perspective": true,
-        "distance": 72.10076346660297,
-        "phi": 67.81568856085194,
-        "thetaOffset": -132.38476953907818,
+        "distance": 45.44146361555746,
+        "phi": 56.86031331519067,
+        "thetaOffset": 73.6452987971628,
         "targetOffset": [
-          -0.9887375057822577,
-          0.32459696580302694,
-          0.1328281438909471
+          0.3749281506563915,
+          -0.11767634971477363,
+          -0.4651344660669565
         ],
         "target": [
           0,
@@ -122,10 +119,10 @@
           "visible": false
         },
         "frame:head_left_camera": {
-          "visible": true
+          "visible": false
         },
         "frame:head_right_camera": {
-          "visible": true
+          "visible": false
         },
         "frame:pelvis": {
           "visible": false
@@ -315,21 +312,22 @@
         },
         "frame:depth_camera": {
           "visible": false
-        },
-        "frame:head_depth_camera": {
-          "visible": false
-        },
-        "frame:head_pose": {
-          "visible": true
-        },
-        "frame:left_wrist_camera": {
-          "visible": false
-        },
-        "frame:right_wrist_camera": {
-          "visible": false
         }
       },
       "topics": {
+        "/pointcloud/pointcloud/static_scene": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "flat",
+          "colorMap": "turbo",
+          "flatColor": "#5a5572ff"
+        },
+        "/pointcloud/pointcloud": {
+          "visible": false,
+          "colorField": "z",
+          "colorMode": "rgba-fields",
+          "colorMap": "turbo"
+        },
         "/pose/right_hand_keyponts": {
           "visible": true
         },
@@ -339,8 +337,48 @@
         "/pose/body_keypoints": {
           "visible": true
         },
+        "/head_left_camera_params/head_left_camera_undistorted/camera_info": {
+          "visible": true,
+          "planarProjectionFactor": 1,
+          "distance": 0.276
+        },
+        "/pcd/pointcloud/static_scene": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "flat",
+          "colorMap": "turbo",
+          "flatColor": "#827ba2ff",
+          "pointSize": 1,
+          "pointShape": "square"
+        },
         "/pose/head_trajectory": {
           "visible": true
+        },
+        "/pose_trim/left_hand_keyponts": {
+          "visible": true
+        },
+        "/pose_trim/head_trajectory": {
+          "visible": true
+        },
+        "/pose_trim/right_hand_keyponts": {
+          "visible": true
+        },
+        "/pose_trim/body_keypoints": {
+          "visible": true
+        },
+        "/pcd/pointcloud": {
+          "visible": false,
+          "colorField": "z",
+          "colorMode": "rgba-fields",
+          "colorMap": "turbo"
+        },
+        "/pointcloud/static": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "flat",
+          "colorMap": "turbo",
+          "pointSize": 1.1,
+          "flatColor": "#907de5ff"
         },
         "/scene-update/right_hand_keypoints": {
           "visible": true
@@ -359,6 +397,15 @@
         "/scene-update/head_trajectory": {
           "visible": true
         },
+        "/pointcloud": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "rgba-fields",
+          "colorMap": "turbo",
+          "pointSize": 4.13,
+          "pointShape": "circle",
+          "stixelsEnabled": false
+        },
         "/sensor/camera/head_left/video": {
           "visible": false,
           "cameraInfoTopic": "/sensor/camera/head_left/intrinsic",
@@ -366,28 +413,6 @@
         },
         "/sensor/camera/depth/intrinsic": {
           "visible": false
-        },
-        "/scene-update/lower_body_keypoints": {
-          "visible": true
-        },
-        "/scene-update/upper_body_keypoints": {
-          "visible": true
-        },
-        "/sensor/camera/head_depth/image": {
-          "visible": true,
-          "frameLocked": true,
-          "cameraInfoTopic": "/sensor/camera/head_depth/intrinsic",
-          "renderMode": "depth",
-          "distance": 1,
-          "planarProjectionFactor": 0,
-          "distanceType": "z-axis",
-          "pointSize": 2,
-          "maxPoints": 3000000,
-          "rgbTopic": "/sensor/camera/head_left/video",
-          "color": "#ffffff",
-          "brightness": 50,
-          "contrast": 50,
-          "rgbCameraInfoTopic": "/sensor/camera/head_left/intrinsic"
         }
       },
       "layers": {
@@ -427,7 +452,7 @@
     "StateTransitions!w6zkp7": {
       "paths": [
         {
-          "value": "/state-transitions/subtask_description.message",
+          "value": "/subtask-annotation/subtask_annotation.data",
           "timestampMethod": "receiveTime"
         }
       ],
@@ -450,6 +475,6 @@
     },
     "second": "StateTransitions!w6zkp7",
     "direction": "column",
-    "splitPercentage": 88.4309937754883
+    "splitPercentage": 78.16353633086702
   }
 }
